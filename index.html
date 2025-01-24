@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:8000; connect-src 'self' http://localhost:8000; script-src 'self'; style-src 'self' 'unsafe-inline'">
+    <title>PDF Query App</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>PDF Query Application</h1>
+        
+        <div class="upload-section">
+            <label for="pdf-file" class="file-label">Choose PDF File</label>
+            <input type="file" id="pdf-file" accept=".pdf" class="file-input">
+            <p id="selected-file" class="file-name"></p>
+        </div>
+
+        <div class="query-section">
+            <label for="query-text">Enter your question about the PDF:</label>
+            <textarea id="query-text" rows="3" placeholder="Type your question here..."></textarea>
+            
+            <button id="submit-query" class="submit-btn">Submit Query</button>
+        </div>
+
+        <div class="result-section">
+            <h2>Response:</h2>
+            <div id="response-text" class="response"></div>
+            <div id="loading" class="loading" style="display: none;">Processing...</div>
+        </div>
+
+        <div class="status-section">
+            <p id="error-message" class="error"></p>
+        </div>
+    </div>
+    <script src="renderer.js"></script>
+</body>
+</html>
