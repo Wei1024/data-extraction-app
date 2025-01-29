@@ -20,7 +20,7 @@ h1, h2 {
     margin-bottom: 20px;
 }
 
-.upload-section, .query-section, .result-section {
+.api-key-section, .upload-section, .query-section, .result-section {
     margin-bottom: 30px;
     padding: 20px;
     background-color: #f8f9fa;
@@ -92,6 +92,53 @@ textarea {
     text-align: center;
     color: #666;
     padding: 20px;
+}
+
+.api-key-input-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+#api-key {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: inherit;
+}
+
+.api-key-btn {
+    padding: 10px 20px;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.api-key-btn:hover {
+    background-color: #5a6268;
+}
+
+.status-message {
+    margin: 5px 0;
+    padding: 5px 10px;
+    border-radius: 4px;
+    display: none;
+}
+
+.status-message.success {
+    color: #155724;
+    background-color: #d4edda;
+    display: block;
+}
+
+.status-message.error {
+    color: #721c24;
+    background-color: #f8d7da;
+    display: block;
 }
 
 .error {

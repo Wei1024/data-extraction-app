@@ -13,13 +13,13 @@ function createWindow () {
     }
   })
 
-  // Configure CSP to allow API requests
+  // Configure CSP to allow Anthropic API requests
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
         ...details.responseHeaders,
         'Content-Security-Policy': [
-          "default-src 'self' http://localhost:8000; connect-src 'self' http://localhost:8000; script-src 'self'; style-src 'self' 'unsafe-inline'"
+          "default-src 'self'; connect-src 'self' https://api.anthropic.com; script-src 'self'; style-src 'self' 'unsafe-inline'"
         ]
       }
     })

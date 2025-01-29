@@ -2,13 +2,22 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:8000; connect-src 'self' http://localhost:8000; script-src 'self'; style-src 'self' 'unsafe-inline'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://api.anthropic.com; script-src 'self'; style-src 'self' 'unsafe-inline'">
     <title>PDF Query App</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
         <h1>PDF Query Application</h1>
+        
+        <div class="api-key-section">
+            <label for="api-key">Anthropic API Key:</label>
+            <div class="api-key-input-container">
+                <input type="password" id="api-key" placeholder="Enter your Anthropic API key">
+                <button id="save-api-key" class="api-key-btn">Save API Key</button>
+            </div>
+            <p id="api-key-status" class="status-message"></p>
+        </div>
         
         <div class="upload-section">
             <label for="pdf-file" class="file-label">Choose PDF File</label>

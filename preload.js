@@ -1,39 +1,90 @@
-const { contextBridge } = require('electron')
+const { contextBridge, ipcRenderer } = require('electron')
 const fs = require('fs')
+const keytar = require('keytar')
+const path = require('path')
+
+// Service name for keytar
+const SERVICE_NAME = 'pdf-query-app'
+const ACCOUNT_NAME = 'anthropic-api-key'
 
 contextBridge.exposeInMainWorld('api', {
   version: process.versions.node,
+  
+  // API Key Management
+  saveApiKey: async (apiKey) => {
+    try {
+      await keytar.setPassword(SERVICE_NAME, ACCOUNT_NAME, apiKey)
+      return true
+    } catch (error) {
+      console.error('Error saving API key:', error)
+      throw new Error('Failed to save API key securely')
+    }
+  },
+
+  getApiKey: async () => {
+    try {
+      return await keytar.getPassword(SERVICE_NAME, ACCOUNT_NAME)
+    } catch (error) {
+      console.error('Error retrieving API key:', error)
+      throw new Error('Failed to retrieve API key')
+    }
+  },
+
   queryPDF: async (pdfFile, queryText) => {
     try {
+      // Get API key
+      const apiKey = await keytar.getPassword(SERVICE_NAME, ACCOUNT_NAME)
+      if (!apiKey) {
+        throw new Error('Please save your Anthropic API key first')
+      }
+
       // Read the file as Buffer
       const fileBuffer = await fs.promises.readFile(pdfFile.path)
       
-      // Create form data
-      const formData = new FormData()
-      
-      // Create a Blob from the buffer
-      const blob = new Blob([fileBuffer], { type: 'application/pdf' })
-      
-      // Create a File object from the Blob
-      const file = new File([blob], pdfFile.name, { type: 'application/pdf' })
-      
-      // Append file and query to FormData
-      formData.append('pdf_file', file)
-      formData.append('query_text', queryText)
+      // Convert buffer to base64
+      const base64Pdf = fileBuffer.toString('base64')
 
-      // Make the API request using browser's fetch
-      const response = await fetch('http://localhost:8000/query-pdf/', {
+      // Make the API request to Anthropic
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        body: formData
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-5-sonnet-20241022',
+          max_tokens: 1024,
+          messages: [
+            {
+              content: [
+                {
+                  type: 'document',
+                  source: {
+                    media_type: 'application/pdf',
+                    type: 'base64',
+                    data: base64Pdf,
+                  },
+                  cache_control: { type: 'ephemeral' },
+                },
+                {
+                  type: 'text',
+                  text: queryText,
+                },
+              ],
+              role: 'user',
+            },
+          ],
+        })
       })
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.detail || 'API request failed')
+        throw new Error(errorData.error?.message || 'API request failed')
       }
 
       const data = await response.json()
-      return data.response
+      return data.content[0].text
     } catch (error) {
       console.error('API Error:', error)
       throw error
