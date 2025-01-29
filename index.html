@@ -20,9 +20,9 @@
         </div>
         
         <div class="upload-section">
-            <label for="pdf-file" class="file-label">Choose PDF File</label>
-            <input type="file" id="pdf-file" accept=".pdf" class="file-input">
-            <p id="selected-file" class="file-name"></p>
+            <label for="pdf-file" class="file-label">Choose PDF File(s)</label>
+            <input type="file" id="pdf-file" accept=".pdf" class="file-input" multiple>
+            <div id="selected-files" class="file-names"></div>
         </div>
 
         <div class="query-section">
@@ -34,7 +34,18 @@
 
         <div class="result-section">
             <h2>Response:</h2>
-            <div id="response-text" class="response"></div>
+            <table id="response-table" class="response-table" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>PDF Name</th>
+                        <th>Query</th>
+                        <th>Thinking Process</th>
+                        <th>Final Results</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <div id="response-text" class="response" style="display: none;"></div>
             <div id="loading" class="loading" style="display: none;">Processing...</div>
         </div>
 

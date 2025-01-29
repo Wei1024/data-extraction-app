@@ -7,19 +7,31 @@ const getExtractionPrompt = (queryText) => {
 ${queryText}
 </user queries>
 
-Think before you provide the extracted answers in <thinking> tags. Separate the thinkings in list if multiple data fields are 
-requested. Finally, write final extracted results in <results> tags, separately in list if multiple is requested.
+Think before you provide the extracted answers in <thinking> tags. Separate the thinkings in nested tags if multiple data fields are 
+requested. Finally, write final extracted results in <results> tags, separately in nested tags if multiple is requested.
 
 Example format:
 <thinking>
-Data 1: {thinking process1}
-Data 2: {thinking process2}
-etc
+    <data>
+        <name>Data 1</name>
+        <process>thinking process1</process>
+    </data>
+    <data>
+        <name>Data 2</name>
+        <process>thinking process2</process>
+    </data>
+    <!-- Add more data entries as needed -->
 </thinking>
 <results>
-Data 1: {Data 1}
-Data 2: {Data 2}
-etc
+    <data>
+        <name>Data 1</name>
+        <value>Data 1</value>
+    </data>
+    <data>
+        <name>Data 2</name>
+        <value>Data 2</value>
+    </data>
+    <!-- Add more data entries as needed -->
 </results>
 `;
 };
