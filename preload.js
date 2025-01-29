@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron')
 const fs = require('fs')
 const keytar = require('keytar')
 const path = require('path')
+const { getExtractionPrompt } = require('./promptTemplates')
 
 // Service name for keytar
 const SERVICE_NAME = 'pdf-query-app'
@@ -69,7 +70,7 @@ contextBridge.exposeInMainWorld('api', {
                 },
                 {
                   type: 'text',
-                  text: queryText,
+                  text: getExtractionPrompt(queryText),
                 },
               ],
               role: 'user',
