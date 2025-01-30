@@ -4,6 +4,76 @@ const keytar = require('keytar')
 const path = require('path')
 const { getExtractionPrompt } = require('./promptTemplates')
 
+// Retry configuration
+const RETRY_CONFIG = {
+  maxRetries: 5,
+  initialDelay: 1000,
+  maxDelay: 32000,
+  backoffFactor: 2,
+  jitter: true
+}
+
+// Helper function to add jitter to delay
+const addJitter = (delay) => {
+  if (!RETRY_CONFIG.jitter) return delay
+  const jitterFactor = 0.5 + Math.random()
+  return Math.floor(delay * jitterFactor)
+}
+
+// Calculate delay for retry attempt
+const calculateDelay = (attempt) => {
+  const delay = Math.min(
+    RETRY_CONFIG.maxDelay,
+    RETRY_CONFIG.initialDelay * Math.pow(RETRY_CONFIG.backoffFactor, attempt)
+  )
+  return addJitter(delay)
+}
+
+// Check if error is retryable
+const isRetryableError = (error) => {
+  if (!error) return false
+  
+  // Rate limit errors
+  if (error.message?.includes('rate limit')) return true
+  
+  // Network errors
+  if (error.name === 'TypeError' && error.message === 'Failed to fetch') return true
+  
+  // Server errors (5xx)
+  if (error.status >= 500 && error.status < 600) return true
+  
+  return false
+}
+
+// Retry function with exponential backoff
+const retryWithExponentialBackoff = async (operation, onRetry) => {
+  let attempt = 0
+  
+  while (true) {
+    try {
+      return await operation()
+    } catch (error) {
+      attempt++
+      
+      if (!isRetryableError(error) || attempt >= RETRY_CONFIG.maxRetries) {
+        throw error
+      }
+      
+      const delay = calculateDelay(attempt)
+      if (onRetry) {
+        onRetry({
+          attempt,
+          maxRetries: RETRY_CONFIG.maxRetries,
+          delay,
+          error
+        })
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, delay))
+    }
+  }
+}
+
 // Service name for keytar
 const SERVICE_NAME = 'pdf-query-app'
 const ACCOUNT_NAME = 'anthropic-api-key'
@@ -31,19 +101,19 @@ contextBridge.exposeInMainWorld('api', {
     }
   },
 
-  queryPDF: async (fileBuffer, queryText) => {
-    try {
-      // Get API key
-      const apiKey = await keytar.getPassword(SERVICE_NAME, ACCOUNT_NAME)
-      if (!apiKey) {
-        throw new Error('Please save your Anthropic API key first')
-      }
+  queryPDF: async (fileBuffer, queryText, onRetry) => {
+    // Get API key
+    const apiKey = await keytar.getPassword(SERVICE_NAME, ACCOUNT_NAME)
+    if (!apiKey) {
+      throw new Error('Please save your Anthropic API key first')
+    }
 
-      // Convert ArrayBuffer to Buffer and then to base64
-      const buffer = Buffer.from(fileBuffer)
-      const base64Pdf = buffer.toString('base64')
+    // Convert ArrayBuffer to Buffer and then to base64
+    const buffer = Buffer.from(fileBuffer)
+    const base64Pdf = buffer.toString('base64')
 
-      // Make the API request to Anthropic
+    // Define the API call operation
+    const makeRequest = async () => {
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -79,11 +149,17 @@ contextBridge.exposeInMainWorld('api', {
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error?.message || 'API request failed')
+        const error = new Error(errorData.error?.message || 'API request failed')
+        error.status = response.status
+        throw error
       }
 
       const data = await response.json()
       return data.content[0].text
+    }
+
+    try {
+      return await retryWithExponentialBackoff(makeRequest, onRetry)
     } catch (error) {
       console.error('API Error:', error)
       throw error

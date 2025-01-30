@@ -3,7 +3,8 @@ let selectedFiles = [];
 document.addEventListener('DOMContentLoaded', async () => {
     const fileInput = document.getElementById('pdf-file');
     const selectedFilesDiv = document.getElementById('selected-files');
-    const queryText = document.getElementById('query-text');
+    const dataFieldsContainer = document.getElementById('data-fields-container');
+    const addFieldButton = document.getElementById('add-field');
     const submitButton = document.getElementById('submit-query');
     const responseText = document.getElementById('response-text');
     const loadingIndicator = document.getElementById('loading');
@@ -24,6 +25,53 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (error) {
         console.error('Error checking API key:', error);
     }
+
+    // Handle adding new data field rows
+    addFieldButton.addEventListener('click', () => {
+        const currentRows = dataFieldsContainer.getElementsByClassName('data-field-row').length;
+        if (currentRows >= 5) {
+            addFieldButton.disabled = true;
+            return;
+        }
+
+        const newRow = document.createElement('div');
+        newRow.className = 'data-field-row';
+        newRow.innerHTML = `
+            <input type="text" class="field-name" placeholder="Data field name (required)" required>
+            <input type="text" class="field-unit" placeholder="Unit (optional)">
+            <input type="text" class="field-description" placeholder="Description (optional but recommended)">
+            <button type="button" class="remove-field">-</button>
+        `;
+
+        dataFieldsContainer.appendChild(newRow);
+
+        if (currentRows + 1 >= 5) {
+            addFieldButton.disabled = true;
+        }
+
+        // Show remove buttons when there's more than one row
+        const removeButtons = dataFieldsContainer.getElementsByClassName('remove-field');
+        Array.from(removeButtons).forEach(button => button.style.display = 'block');
+    });
+
+    // Handle removing data field rows
+    dataFieldsContainer.addEventListener('click', (event) => {
+        if (event.target.classList.contains('remove-field')) {
+            const currentRows = dataFieldsContainer.getElementsByClassName('data-field-row').length;
+            if (currentRows > 1) {
+                event.target.closest('.data-field-row').remove();
+                addFieldButton.disabled = false;
+
+                // Hide remove button on the last remaining row
+                if (currentRows - 1 === 1) {
+                    const lastRemoveButton = dataFieldsContainer.querySelector('.remove-field');
+                    if (lastRemoveButton) {
+                        lastRemoveButton.style.display = 'none';
+                    }
+                }
+            }
+        }
+    });
 
     // Handle API key saving
     saveApiKeyButton.addEventListener('click', async () => {
@@ -81,11 +129,42 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        if (!queryText.value.trim()) {
-            errorMessage.textContent = 'Please enter a question';
+        // Validate and collect data from all fields
+        const dataFields = Array.from(dataFieldsContainer.getElementsByClassName('data-field-row'));
+        const formattedQuery = [];
+        let hasEmptyRequired = false;
+
+        dataFields.forEach((row, index) => {
+            const nameInput = row.querySelector('.field-name');
+            const unitInput = row.querySelector('.field-unit');
+            const descInput = row.querySelector('.field-description');
+
+            if (!nameInput.value.trim()) {
+                hasEmptyRequired = true;
+                nameInput.style.borderColor = '#dc3545';
+            } else {
+                nameInput.style.borderColor = '#ddd';
+                let queryLine = `${index + 1}. ${nameInput.value.trim()}`;
+                
+                if (unitInput.value.trim()) {
+                    queryLine += ` (${unitInput.value.trim()})`;
+                }
+                
+                if (descInput.value.trim()) {
+                    queryLine += `: ${descInput.value.trim()}`;
+                }
+                
+                formattedQuery.push(queryLine);
+            }
+        });
+
+        if (hasEmptyRequired) {
+            errorMessage.textContent = 'Please fill in all required data field names';
             errorMessage.style.display = 'block';
             return;
         }
+
+        const queryString = formattedQuery.join('\n');
 
         try {
             errorMessage.style.display = 'none';
@@ -99,9 +178,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             responseTable.style.display = 'table';
             responseText.style.display = 'none';
 
-            // Process each file
-            for (const file of selectedFiles) {
+            // Process files sequentially
+            for (let i = 0; i < selectedFiles.length; i++) {
+                const file = selectedFiles[i];
                 try {
+                    // Show processing status
+                    loadingIndicator.textContent = `Processing ${i + 1}/${selectedFiles.length}: ${file.name}`;
+
                     // Read file as ArrayBuffer
                     const fileBuffer = await new Promise((resolve, reject) => {
                         const reader = new FileReader();
@@ -110,7 +193,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                         reader.readAsArrayBuffer(file);
                     });
 
-                    const response = await window.api.queryPDF(fileBuffer, queryText.value.trim());
+                    // Add delay between API calls to prevent rate limiting
+                    if (i > 0) {
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+
+                    const response = await window.api.queryPDF(fileBuffer, queryString, (retryInfo) => {
+                        const { attempt, maxRetries, delay, error } = retryInfo;
+                        const waitSeconds = Math.ceil(delay / 1000);
+                        loadingIndicator.textContent = `Processing ${i + 1}/${selectedFiles.length}: ${file.name}\nRetry ${attempt}/${maxRetries}: Waiting ${waitSeconds}s before retry...\nReason: ${error.message}`;
+                    });
                     
                     // Parse XML response
                     const parser = new DOMParser();
@@ -124,7 +216,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         const row = document.createElement('tr');
                         row.innerHTML = `
                             <td>${file.name}</td>
-                            <td>${queryText.value.trim()}</td>
+                            <td>${queryString}</td>
                             <td>No structured data found</td>
                             <td>No structured data found</td>
                         `;
@@ -195,7 +287,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${file.name}</td>
-                        <td>${queryText.value.trim()}</td>
+                        <td>${queryString}</td>
                         <td class="error" colspan="2">Error: ${error.message}</td>
                     `;
                     tbody.appendChild(row);
@@ -205,6 +297,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             errorMessage.textContent = `Error: ${error.message}`;
             errorMessage.style.display = 'block';
         } finally {
+            loadingIndicator.textContent = 'Processing...';
             loadingIndicator.style.display = 'none';
             submitButton.disabled = false;
         }

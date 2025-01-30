@@ -26,8 +26,16 @@
         </div>
 
         <div class="query-section">
-            <label for="query-text">Enter your question about the PDF:</label>
-            <textarea id="query-text" rows="3" placeholder="Type your question here..."></textarea>
+            <label>Enter data fields to extract:</label>
+            <div id="data-fields-container">
+                <div class="data-field-row">
+                    <input type="text" class="field-name" placeholder="Data field name (required)" required>
+                    <input type="text" class="field-unit" placeholder="Unit (optional)">
+                    <input type="text" class="field-description" placeholder="Description (optional but recommended)">
+                    <button type="button" class="remove-field" style="display: none;">-</button>
+                </div>
+            </div>
+            <button type="button" id="add-field" class="add-field-btn">+</button>
             
             <button id="submit-query" class="submit-btn">Submit Query</button>
         </div>
