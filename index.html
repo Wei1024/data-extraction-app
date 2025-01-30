@@ -26,17 +26,24 @@
         </div>
 
         <div class="query-section">
-            <label>Enter data fields to extract:</label>
-            <div id="data-fields-container">
-                <div class="data-field-row">
-                    <input type="text" class="field-name" placeholder="Data field name (required)" required>
-                    <input type="text" class="field-unit" placeholder="Unit (optional)">
-                    <input type="text" class="field-description" placeholder="Description (optional but recommended)">
-                    <button type="button" class="remove-field" style="display: none;">-</button>
+            <div id="topics-container">
+                <div class="topic-section">
+                    <div class="topic-header">
+                        <input type="text" class="topic-name" placeholder="Topic name (required)" required>
+                        <button type="button" class="remove-topic" style="display: none;">Remove Topic</button>
+                    </div>
+                    <div class="data-fields-container">
+                        <div class="data-field-row">
+                            <input type="text" class="field-name" placeholder="Data field name (required)" required>
+                            <input type="text" class="field-unit" placeholder="Unit (optional)">
+                            <input type="text" class="field-description" placeholder="Description (optional but recommended)">
+                            <button type="button" class="remove-field" style="display: none;">-</button>
+                        </div>
+                    </div>
+                    <button type="button" class="add-field-btn">+</button>
                 </div>
             </div>
-            <button type="button" id="add-field" class="add-field-btn">+</button>
-            
+            <button type="button" id="add-topic" class="add-topic-btn">Add New Topic</button>
             <button id="submit-query" class="submit-btn">Submit Query</button>
         </div>
 
@@ -46,6 +53,7 @@
                 <thead>
                     <tr>
                         <th>PDF Name</th>
+                        <th>Topic</th>
                         <th>Query</th>
                         <th>Thinking Process</th>
                         <th>Final Results</th>
