@@ -7,7 +7,7 @@ const { getExtractionPrompt } = require('./promptTemplates')
 // Retry configuration
 const RETRY_CONFIG = {
   maxRetries: 5,
-  initialDelay: 1000,
+  initialDelay: 5000,
   maxDelay: 32000,
   backoffFactor: 2,
   jitter: true
