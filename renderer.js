@@ -35,6 +35,26 @@ const createTopicSection = () => {
     return section;
 };
 
+// Helper function to convert table data to CSV
+const tableToCSV = (table) => {
+    const rows = table.querySelectorAll('tr');
+    const csvRows = [];
+    
+    for (const row of rows) {
+        const cells = row.querySelectorAll('th, td');
+        const csvRow = Array.from(cells)
+            .map(cell => {
+                // Escape quotes and wrap content in quotes to handle commas and newlines
+                const content = cell.textContent.replace(/"/g, '""');
+                return `"${content}"`;
+            })
+            .join(',');
+        csvRows.push(csvRow);
+    }
+    
+    return csvRows.join('\n');
+};
+
 document.addEventListener('DOMContentLoaded', async () => {
     const fileInput = document.getElementById('pdf-file');
     const selectedFilesDiv = document.getElementById('selected-files');
@@ -45,6 +65,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const loadingIndicator = document.getElementById('loading');
     const errorMessage = document.getElementById('error-message');
     const apiKeyInput = document.getElementById('api-key');
+    const downloadButton = document.getElementById('download-csv');
     const saveApiKeyButton = document.getElementById('save-api-key');
     const apiKeyStatus = document.getElementById('api-key-status');
 
@@ -259,6 +280,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             tbody.innerHTML = '';
             responseTable.style.display = 'table';
             responseText.style.display = 'none';
+            downloadButton.style.display = 'block';
 
             // Reset cost summary
             const costSummary = document.querySelector('.cost-summary');
@@ -442,5 +464,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             loadingIndicator.style.display = 'none';
             submitButton.disabled = false;
         }
+    });
+
+    // Handle CSV download
+    downloadButton.addEventListener('click', () => {
+        const table = document.getElementById('response-table');
+        const csv = tableToCSV(table);
+        
+        // Create a Blob containing the CSV data
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        
+        // Create a download link and trigger it
+        const link = document.createElement('a');
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        link.href = URL.createObjectURL(blob);
+        link.download = `extraction-results-${timestamp}.csv`;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     });
 });
