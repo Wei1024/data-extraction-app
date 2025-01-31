@@ -260,6 +260,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             responseTable.style.display = 'table';
             responseText.style.display = 'none';
 
+            // Reset cost summary
+            const costSummary = document.querySelector('.cost-summary');
+            costSummary.style.display = 'block';
+            let totalUsage = {
+                input_tokens: 0,
+                output_tokens: 0,
+                cache_read_input_tokens: 0,
+                cache_creation_input_tokens: 0
+            };
+            let totalCosts = {
+                input: 0,
+                output: 0,
+                cache_read: 0,
+                cache_creation: 0
+            };
+
             // Process files sequentially
             for (let i = 0; i < selectedFiles.length; i++) {
                 const file = selectedFiles[i];
@@ -284,18 +300,51 @@ document.addEventListener('DOMContentLoaded', async () => {
                             await new Promise(resolve => setTimeout(resolve, 1000));
                         }
 
-                        const response = await window.api.queryPDF(fileBuffer, topic.query, (retryInfo) => {
+                        const result = await window.api.queryPDF(fileBuffer, topic.query, (retryInfo) => {
                             const { attempt, maxRetries, delay, error } = retryInfo;
                             const waitSeconds = Math.ceil(delay / 1000);
                             loadingIndicator.textContent = `Processing ${i + 1}/${selectedFiles.length}: ${file.name}\nTopic ${j + 1}/${formattedTopics.length}: ${topic.name}\nRetry ${attempt}/${maxRetries}: Waiting ${waitSeconds}s before retry...\nReason: ${error.message}`;
                         });
                     
+                        // Update usage totals
+                        if (result.usage) {
+                            totalUsage.input_tokens += result.usage.input_tokens || 0;
+                            totalUsage.output_tokens += result.usage.output_tokens || 0;
+                            totalUsage.cache_read_input_tokens += result.usage.cache_read_input_tokens || 0;
+                            totalUsage.cache_creation_input_tokens += result.usage.cache_creation_input_tokens || 0;
+                        }
+
+                        // Update cost totals
+                        if (result.costs) {
+                            totalCosts.input += result.costs.input || 0;
+                            totalCosts.output += result.costs.output || 0;
+                            totalCosts.cache_read += result.costs.cache_read || 0;
+                            totalCosts.cache_creation += result.costs.cache_creation || 0;
+                        }
+
+                        // Update cost summary display
+                        document.getElementById('input-tokens').textContent = totalUsage.input_tokens.toLocaleString();
+                        document.getElementById('output-tokens').textContent = totalUsage.output_tokens.toLocaleString();
+                        document.getElementById('cache-read-tokens').textContent = totalUsage.cache_read_input_tokens.toLocaleString();
+                        document.getElementById('cache-creation-tokens').textContent = totalUsage.cache_creation_input_tokens.toLocaleString();
+
+                        document.getElementById('input-cost').textContent = totalCosts.input.toFixed(4);
+                        document.getElementById('output-cost').textContent = totalCosts.output.toFixed(4);
+                        document.getElementById('cache-read-cost').textContent = totalCosts.cache_read.toFixed(4);
+                        document.getElementById('cache-creation-cost').textContent = totalCosts.cache_creation.toFixed(4);
+                        document.getElementById('total-cost').textContent = (
+                            totalCosts.input + 
+                            totalCosts.output + 
+                            totalCosts.cache_read + 
+                            totalCosts.cache_creation
+                        ).toFixed(4);
+
                         // Parse XML response
                         const parser = new DOMParser();
                         
                         // Extract and parse thinking process
-                        const thinkingMatch = response.match(/<thinking>([\s\S]*?)<\/thinking>/);
-                        const resultsMatch = response.match(/<results>([\s\S]*?)<\/results>/);
+                        const thinkingMatch = result.content[0].text.match(/<thinking>([\s\S]*?)<\/thinking>/);
+                        const resultsMatch = result.content[0].text.match(/<results>([\s\S]*?)<\/results>/);
                         
                         if (!thinkingMatch || !resultsMatch) {
                             // Handle old format or missing tags

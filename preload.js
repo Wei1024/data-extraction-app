@@ -155,7 +155,34 @@ contextBridge.exposeInMainWorld('api', {
       }
 
       const data = await response.json()
-      return data.content[0].text
+      
+      // Calculate costs based on token usage
+      const calculateCosts = (usage) => {
+        const costs = {
+          input: (usage.input_tokens || 0) * (3 / 1000000),
+          output: (usage.output_tokens || 0) * (15 / 1000000),
+          cache_read: (usage.cache_read_input_tokens || 0) * (0.30 / 1000000),
+          cache_creation: (usage.cache_creation_input_tokens || 0) * (3.75 / 1000000)
+        }
+        
+        costs.total = costs.input + costs.output + costs.cache_read + costs.cache_creation
+        return costs
+      }
+
+      // Return both the API response and calculated costs
+      return {
+        content: data.content,
+        usage: data.usage,
+        costs: calculateCosts(data.usage),
+        metadata: {
+          id: data.id,
+          model: data.model,
+          role: data.role,
+          stop_reason: data.stop_reason,
+          stop_sequence: data.stop_sequence,
+          type: data.type
+        }
+      }
     }
 
     try {

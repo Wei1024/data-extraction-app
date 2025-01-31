@@ -338,3 +338,46 @@ label {
     margin-bottom: 5px;
     color: #495057;
 }
+
+.cost-summary {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.cost-details {
+    display: flex;
+    gap: 40px;
+    justify-content: space-between;
+}
+
+.token-usage, .cost-breakdown {
+    flex: 1;
+}
+
+.cost-summary h3 {
+    color: #333;
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+.cost-summary h4 {
+    color: #495057;
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.cost-summary p {
+    margin: 8px 0;
+    color: #666;
+}
+
+.total-cost {
+    margin-top: 15px !important;
+    padding-top: 15px;
+    border-top: 1px solid #dee2e6;
+    font-weight: bold;
+    color: #333 !important;
+}

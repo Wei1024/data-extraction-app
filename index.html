@@ -48,6 +48,26 @@
         </div>
 
         <div class="result-section">
+            <div class="cost-summary" style="display: none;">
+                <h3>Token Usage & Cost Summary</h3>
+                <div class="cost-details">
+                    <div class="token-usage">
+                        <h4>Token Usage</h4>
+                        <p>Input Tokens: <span id="input-tokens">0</span></p>
+                        <p>Output Tokens: <span id="output-tokens">0</span></p>
+                        <p>Cache Read Tokens: <span id="cache-read-tokens">0</span></p>
+                        <p>Cache Creation Tokens: <span id="cache-creation-tokens">0</span></p>
+                    </div>
+                    <div class="cost-breakdown">
+                        <h4>Cost Breakdown (USD)</h4>
+                        <p>Input Cost: $<span id="input-cost">0.00</span></p>
+                        <p>Output Cost: $<span id="output-cost">0.00</span></p>
+                        <p>Cache Read Cost: $<span id="cache-read-cost">0.00</span></p>
+                        <p>Cache Creation Cost: $<span id="cache-creation-cost">0.00</span></p>
+                        <p class="total-cost">Total Cost: $<span id="total-cost">0.00</span></p>
+                    </div>
+                </div>
+            </div>
             <h2>Response:</h2>
             <table id="response-table" class="response-table" style="display: none;">
                 <thead>
