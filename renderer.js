@@ -68,6 +68,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const downloadButton = document.getElementById('download-csv');
     const saveApiKeyButton = document.getElementById('save-api-key');
     const apiKeyStatus = document.getElementById('api-key-status');
+    const batchModeToggle = document.getElementById('batch-mode-toggle');
+    const batchJobsContainer = document.getElementById('batch-jobs-container');
+    const refreshBatchStatusButton = document.getElementById('refresh-batch-status');
 
     // Check for existing API key
     try {
@@ -204,8 +207,312 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    // Enhanced batch jobs view
+    const updateBatchJobsView = () => {
+        const jobs = window.api.listBatchJobs({ includeExpired: false });
+        const batchJobsList = document.getElementById('batch-jobs-list');
+        batchJobsList.innerHTML = '';
+
+        jobs.forEach(job => {
+            const jobElement = document.createElement('div');
+            jobElement.className = 'batch-job';
+            
+            const statusClass = job.processing_status === 'ended' ? 'success' : 
+                              job.error ? 'error' : 'processing';
+            
+            // Calculate time remaining or expiration
+            const now = new Date();
+            const expirationDate = new Date(job.created_at);
+            expirationDate.setDate(expirationDate.getDate() + 29);
+            const timeRemaining = expirationDate - now;
+            const daysRemaining = Math.ceil(timeRemaining / (1000 * 60 * 60 * 24));
+
+            jobElement.innerHTML = `
+                <div class="job-header">
+                    <span class="job-id">Job ID: ${job.id}</span>
+                    <div class="job-status-container">
+                        <span class="job-status ${statusClass}">${job.processing_status}</span>
+                        ${job.processing_status !== 'ended' && !job.cancel_initiated_at ? 
+                            `<button class="cancel-job" data-job-id="${job.id}">Cancel</button>` : ''}
+                    </div>
+                </div>
+                <div class="job-details">
+                    <div class="job-timing">
+                        <div>Submitted: ${new Date(job.created_at).toLocaleString()}</div>
+                        <div>Expires in: ${daysRemaining} days</div>
+                        ${job.ended_at ? `<div>Completed: ${new Date(job.ended_at).toLocaleString()}</div>` : ''}
+                    </div>
+                    <div class="job-content">
+                        <div>Files: ${job.files.join(', ')}</div>
+                        <div>Topics: ${job.topics.join(', ')}</div>
+                    </div>
+                    <div class="job-progress">
+                        <div>Status: ${job.request_counts ? `
+                            Processing: ${job.request_counts.processing},
+                            Succeeded: ${job.request_counts.succeeded},
+                            Errored: ${job.request_counts.errored},
+                            Canceled: ${job.request_counts.canceled},
+                            Expired: ${job.request_counts.expired}
+                        ` : 'Initializing...'}</div>
+                    </div>
+                    ${job.cache_stats ? `
+                    <div class="cache-stats">
+                            <div>Results Summary:</div>
+                            <div>Succeeded: ${job.cache_stats.succeeded}</div>
+                            <div>Errored: ${job.cache_stats.errored}</div>
+                            <div>Canceled: ${job.cache_stats.canceled}</div>
+                            <div>Expired: ${job.cache_stats.expired}</div>
+                            <div>Total: ${job.cache_stats.total}</div>
+                            <div class="cache-performance">
+                                <div>Cache Performance:</div>
+                                <div>Hits: ${job.cache_stats.hits}</div>
+                                <div>Misses: ${job.cache_stats.misses}</div>
+                                <div>Hit Rate: ${job.cache_stats.hit_rate.toFixed(1)}%</div>
+                            </div>
+                        </div>
+                    ` : ''}
+                    ${job.costs ? `
+                        <div class="job-costs">
+                            <div class="cost-section">
+                                <h4>Regular Costs:</h4>
+                                <div>Input: $${job.costs.regular.input.toFixed(4)}</div>
+                                <div>Output: $${job.costs.regular.output.toFixed(4)}</div>
+                                <div>Total: $${job.costs.regular.total.toFixed(4)}</div>
+                            </div>
+                            <div class="cost-section">
+                                <h4>Cached Costs:</h4>
+                                <div>Input: $${job.costs.cached.input.toFixed(4)}</div>
+                                <div>Output: $${job.costs.cached.output.toFixed(4)}</div>
+                                <div>Total: $${job.costs.cached.total.toFixed(4)}</div>
+                            </div>
+                            <div class="cost-savings">
+                                <div>Total Cost: $${job.costs.total.toFixed(4)}</div>
+                                <div>Savings: $${job.costs.savings.toFixed(4)}</div>
+                            </div>
+                        </div>
+                    ` : ''}
+                    ${job.error ? `<div class="job-error">Error: ${job.error}</div>` : ''}
+                </div>
+                ${job.processing_status === 'ended' ? `
+                    <button class="download-results" data-job-id="${job.id}">Download Results</button>
+                ` : ''}
+            `;
+            
+            batchJobsList.appendChild(jobElement);
+        });
+    };
+
+    // Enhanced batch mode toggle
+    if (batchModeToggle) {
+        const batchModeOptions = document.createElement('div');
+        batchModeOptions.className = 'batch-mode-options';
+        batchModeOptions.innerHTML = `
+            <div class="option">
+                <label>
+                    <input type="checkbox" id="enable-caching" checked>
+                    Enable Caching (recommended for similar content)
+                </label>
+                <div class="option-description">
+                    Caching can reduce costs by up to 90% for similar content within 5 minutes
+                </div>
+            </div>
+            <div class="batch-size-warning" style="display: none;">
+                Warning: Current batch size approaching 256MB limit
+            </div>
+        `;
+        batchModeToggle.parentNode.appendChild(batchModeOptions);
+
+        batchModeToggle.addEventListener('change', () => {
+            const isBatchMode = batchModeToggle.checked;
+            document.body.classList.toggle('batch-mode', isBatchMode);
+            batchJobsContainer.style.display = isBatchMode ? 'block' : 'none';
+            submitButton.textContent = isBatchMode ? 'Submit Batch Job' : 'Submit Query';
+            batchModeOptions.style.display = isBatchMode ? 'block' : 'none';
+        });
+    }
+
+    // Enhanced refresh batch status with auto-refresh
+    if (refreshBatchStatusButton) {
+        let autoRefreshInterval = null;
+
+        const refreshStatus = async () => {
+            const jobs = window.api.listBatchJobs();
+            let hasProcessingJobs = false;
+
+            for (const job of jobs) {
+                if (job.processing_status === 'in_progress') {
+                    hasProcessingJobs = true;
+                    try {
+                        await window.api.getBatchJobStatus(job.id);
+                    } catch (error) {
+                        console.error(`Failed to update status for job ${job.id}:`, error);
+                    }
+                }
+            }
+
+            updateBatchJobsView();
+
+            // Stop auto-refresh if no jobs are processing
+            if (!hasProcessingJobs && autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+                refreshBatchStatusButton.textContent = 'Refresh Status';
+            }
+        };
+
+        refreshBatchStatusButton.addEventListener('click', async () => {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+                refreshBatchStatusButton.textContent = 'Refresh Status';
+            } else {
+                refreshBatchStatusButton.textContent = 'Auto-Refreshing...';
+                autoRefreshInterval = setInterval(refreshStatus, 30000); // Refresh every 30 seconds
+            }
+            await refreshStatus();
+        });
+    }
+
+    // Handle batch job cancellation
+    batchJobsContainer.addEventListener('click', async (event) => {
+        if (event.target.classList.contains('cancel-job')) {
+            const jobId = event.target.dataset.jobId;
+            try {
+                await window.api.cancelBatchJob(jobId);
+                updateBatchJobsView();
+            } catch (error) {
+                console.error(`Failed to cancel job ${jobId}:`, error);
+            }
+        }
+    });
+
+    // Handle batch job results download
+    batchJobsContainer.addEventListener('click', async (event) => {
+        if (event.target.classList.contains('download-results')) {
+            const button = event.target;
+            const originalText = button.textContent;
+            const jobId = button.dataset.jobId;
+            const job = window.api.listBatchJobs().find(j => j.id === jobId);
+            
+            if (job && job.processing_status === 'ended') {
+                try {
+                    // Show loading state
+                    button.disabled = true;
+                    button.textContent = 'Downloading...';
+                    button.classList.add('downloading');
+                    
+                    // Get results through main process
+                    const results = await window.api.getBatchJobStatus(jobId);
+                    
+                    if (results.results && results.results.length > 0) {
+                        // Extract topic and query from custom_id
+                        const csv = results.results.map(result => {
+                            if (result.result?.message?.content?.[0]?.text) {
+                                const content = result.result.message.content[0].text;
+                                
+                                // Extract PDF name from custom_id by removing the -test suffix
+                                const pdfName = result.custom_id.replace('_pdf-test', '');
+                                
+                                // Get topic from job data
+                                const [pdfTopic] = job.topics.filter(t => 
+                                    result.custom_id.includes(t.toLowerCase().replace(/\s+/g, '_'))
+                                ) || [''];
+
+                                let query = '';
+                                let thinkingProcess = '';
+                                let finalResults = '';
+
+                                // Extract thinking process
+                                const thinkingMatch = content.match(/<thinking>([\s\S]*?)<\/thinking>/);
+                                if (thinkingMatch) {
+                                    // Extract process from thinking content
+                                    const thinkingProcessMatch = thinkingMatch[1].match(/<process>(.*?)<\/process>/);
+                                    if (thinkingProcessMatch) {
+                                        thinkingProcess = thinkingProcessMatch[1].trim();
+                                    }
+
+                                    // Extract query from name tag
+                                    const nameMatch = thinkingMatch[1].match(/<name>(.*?)<\/name>/);
+                                    if (nameMatch) {
+                                        query = nameMatch[1].trim();
+                                    }
+                                }
+
+                                // Extract final results
+                                const resultsMatch = content.match(/<results>([\s\S]*?)<\/results>/);
+                                if (resultsMatch) {
+                                    // Extract value from results content
+                                    const resultsValueMatch = resultsMatch[1].match(/<value>(.*?)<\/value>/);
+                                    if (resultsValueMatch) {
+                                        finalResults = resultsValueMatch[1].trim();
+                                    }
+                                }
+
+                                // Escape quotes and wrap fields in quotes
+                                const escapeField = (field) => {
+                                    return `"${field.toString().replace(/"/g, '""')}"`;
+                                };
+
+                                return [
+                                    escapeField(pdfName),
+                                    escapeField(pdfTopic),
+                                    escapeField(query),
+                                    escapeField(thinkingProcess),
+                                    escapeField(finalResults)
+                                ].join(',');
+                            }
+                            return `"${result.custom_id}","","","Error: No content","Error: No content"`;
+                        }).join('\n');
+                        
+                        const header = 'PDF Name,Topic,Query,Thinking Process,Final Results\n';
+                        const blob = new Blob([header + csv], { type: 'text/csv;charset=utf-8;' });
+                        const link = document.createElement('a');
+                        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                        link.href = URL.createObjectURL(blob);
+                        link.download = `batch-results-${jobId}-${timestamp}.csv`;
+                        link.style.display = 'none';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        
+                        // Show success state briefly
+                        button.textContent = 'Downloaded!';
+                        button.classList.remove('downloading');
+                        button.classList.add('success');
+                        setTimeout(() => {
+                            button.textContent = originalText;
+                            button.classList.remove('success');
+                            button.disabled = false;
+                        }, 2000);
+                    } else {
+                        console.error('No results found in job:', results);
+                        button.textContent = 'No results found';
+                        button.classList.remove('downloading');
+                        button.classList.add('error');
+                        setTimeout(() => {
+                            button.textContent = originalText;
+                            button.classList.remove('error');
+                            button.disabled = false;
+                        }, 3000);
+                    }
+                } catch (error) {
+                    console.error('Error downloading results:', error);
+                    button.textContent = 'Download failed';
+                    button.classList.remove('downloading');
+                    button.classList.add('error');
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.classList.remove('error');
+                        button.disabled = false;
+                    }, 3000);
+                }
+            }
+        }
+    });
+
     // Handle form submission
     submitButton.addEventListener('click', async () => {
+        const isBatchMode = batchModeToggle?.checked;
         if (selectedFiles.length === 0) {
             errorMessage.textContent = 'Please select at least one PDF file';
             errorMessage.style.display = 'block';
@@ -273,6 +580,28 @@ document.addEventListener('DOMContentLoaded', async () => {
             errorMessage.style.display = 'none';
             loadingIndicator.style.display = 'block';
             submitButton.disabled = true;
+
+            if (isBatchMode) {
+                // Calculate total batch size
+                const totalSize = new Blob([JSON.stringify(formattedTopics)]).size * selectedFiles.length;
+                const batchSizeWarning = document.querySelector('.batch-size-warning');
+                if (totalSize > window.api.constants.MAX_BATCH_SIZE * 0.8) { // Show warning at 80% of limit
+                    batchSizeWarning.style.display = 'block';
+                    batchSizeWarning.textContent = `Warning: Batch size at ${Math.round(totalSize / window.api.constants.MAX_BATCH_SIZE * 100)}% of limit`;
+                }
+
+                // Submit batch job with options
+                const options = {
+                    enableCaching: document.getElementById('enable-caching').checked
+                };
+                const batchJob = await window.api.submitBatchQuery(selectedFiles, formattedTopics, options);
+                updateBatchJobsView();
+                loadingIndicator.textContent = `Batch job ${batchJob.id} submitted successfully. Results will be available within 24 hours.`;
+                
+                // Start auto-refresh
+                refreshBatchStatusButton.click();
+                return;
+            }
             
             // Clear previous results
             const responseTable = document.getElementById('response-table');

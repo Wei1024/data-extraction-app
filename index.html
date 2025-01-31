@@ -25,6 +25,14 @@
             <div id="selected-files" class="file-names"></div>
         </div>
 
+        <div class="mode-toggle">
+            <label class="toggle-label">
+                <input type="checkbox" id="batch-mode-toggle">
+                <span class="toggle-text">Batch Mode</span>
+                <span class="toggle-description">(Lower cost, results within 24 hours)</span>
+            </label>
+        </div>
+
         <div class="query-section">
             <div id="topics-container">
                 <div class="topic-section">
@@ -45,6 +53,14 @@
             </div>
             <button type="button" id="add-topic" class="add-topic-btn">Add New Topic</button>
             <button id="submit-query" class="submit-btn">Submit Query</button>
+        </div>
+
+        <div id="batch-jobs-container" class="batch-jobs-section" style="display: none;">
+            <div class="batch-jobs-header">
+                <h2>Batch Jobs</h2>
+                <button id="refresh-batch-status" class="refresh-btn">Refresh Status</button>
+            </div>
+            <div id="batch-jobs-list" class="batch-jobs-list"></div>
         </div>
 
         <div class="result-section">
@@ -72,16 +88,16 @@
             <div class="table-container">
                 <div class="table-header">
                     <table id="response-table" class="response-table" style="display: none;">
-                <thead>
-                    <tr>
-                        <th>PDF Name</th>
-                        <th>Topic</th>
-                        <th>Query</th>
-                        <th>Thinking Process</th>
-                        <th>Final Results</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
+                        <thead>
+                            <tr>
+                                <th>PDF Name</th>
+                                <th>Topic</th>
+                                <th>Query</th>
+                                <th>Thinking Process</th>
+                                <th>Final Results</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
                     </table>
                     <button id="download-csv" class="download-btn" style="display: none;">Download Results as CSV</button>
                 </div>
