@@ -287,7 +287,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </div>
                             <div class="cost-savings">
                                 <div>Total Cost: $${job.costs.total.toFixed(4)}</div>
-                                <div>Savings: $${job.costs.savings.toFixed(4)}</div>
                             </div>
                         </div>
                     ` : ''}

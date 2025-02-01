@@ -692,9 +692,6 @@ label {
     font-weight: bold;
 }
 
-.cost-savings div:last-child {
-    color: #28a745;
-}
 
 /* Auto-refresh button states */
 .refresh-btn.auto-refreshing {
