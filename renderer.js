@@ -6,7 +6,7 @@ const createDataFieldRow = () => {
     row.className = 'data-field-row';
     row.innerHTML = `
         <input type="text" class="field-name" placeholder="Data field name (required)" required>
-        <input type="text" class="field-unit" placeholder="Unit (optional)">
+        <input type="text" class="field-unit" placeholder="Result format" title="Expected result format (e.g., number list, bullet points)">
         <input type="text" class="field-description" placeholder="Description (optional but recommended)">
         <button type="button" class="remove-field">-</button>
     `;
@@ -25,7 +25,7 @@ const createTopicSection = () => {
         <div class="data-fields-container">
             <div class="data-field-row">
                 <input type="text" class="field-name" placeholder="Data field name (required)" required>
-                <input type="text" class="field-unit" placeholder="Unit (optional)">
+                <input type="text" class="field-unit" placeholder="Result format" title="Expected result format (e.g., number list, bullet points)">
                 <input type="text" class="field-description" placeholder="Description (optional but recommended)">
                 <button type="button" class="remove-field" style="display: none;">-</button>
             </div>
@@ -550,7 +550,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     let queryLine = `${index + 1}. ${nameInput.value.trim()}`;
                     
                     if (unitInput.value.trim()) {
-                        queryLine += ` (${unitInput.value.trim()})`;
+                        queryLine += ` [Expected result format: ${unitInput.value.trim()}]`;
                     }
                     
                     if (descInput.value.trim()) {
