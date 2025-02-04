@@ -34,7 +34,18 @@
         </div>
 
         <div class="query-section">
+            <div class="topic-templates">
+                <h3>CSV templates for batch queries</h3>
+                <p class="template-description">Use our example template as a starting point, or import your own CSV file with predefined extraction fields</p>
+                <div class="template-buttons">
+                    <button id="download-template" class="template-btn">Download Example Template</button>
+                    <label for="csv-import" class="template-btn">Import Topics from CSV</label>
+                    <input type="file" id="csv-import" accept=".csv" class="file-input">
+                </div>
+            </div>
             <div id="topics-container">
+                <h3>Manual inputs</h3>
+                <p class="input-description">You can also manually input the data fields you wish to extract.</p>
                 <div class="topic-section">
                     <div class="topic-header">
                         <input type="text" class="topic-name" placeholder="Topic name (required)" required>
@@ -51,7 +62,9 @@
                     <button type="button" class="add-field-btn">+</button>
                 </div>
             </div>
-            <button type="button" id="add-topic" class="add-topic-btn">Add New Topic</button>
+            <div class="topic-controls">
+                <button type="button" id="add-topic" class="add-topic-btn">Add New Topic</button>
+            </div>
             <button id="submit-query" class="submit-btn">Submit Query</button>
         </div>
 

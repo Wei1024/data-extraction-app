@@ -416,24 +416,41 @@ contextBridge.exposeInMainWorld('api', {
             total: totalRequests
           }
           
-          // Calculate costs with cache consideration
+          // Calculate costs using actual token counts from API
+          let totalRegularInput = 0;
+          let totalRegularOutput = 0;
+          let totalCacheRead = 0;
+          let totalCacheCreation = 0;
+
+          // Sum up all token counts from results
+          for (const result of results) {
+            if (result?.result?.type === 'succeeded' && result.result?.message?.usage) {
+              const usage = result.result.message.usage;
+              totalRegularInput += usage.input_tokens || 0;
+              totalRegularOutput += usage.output_tokens || 0;
+              totalCacheRead += usage.cache_read_input_tokens || 0;
+              totalCacheCreation += usage.cache_creation_input_tokens || 0;
+            }
+          }
+
+          // Calculate costs using actual token counts
           const regularCost = {
-            input: (totalTokens.input * 1.5) / 1000000,
-            output: (totalTokens.output * 7.5) / 1000000
+            input: (totalRegularInput * 1.5) / 1000000,
+            output: (totalRegularOutput * 7.5) / 1000000
           }
-          regularCost.total = regularCost.input + regularCost.output
-          
+          regularCost.total = regularCost.input + regularCost.output;
+
           const cachedCost = {
-            input: (stats.cacheHits * (totalTokens.input / totalRequests) * 0.15) / 1000000, // 90% discount
-            output: (stats.cacheHits * (totalTokens.output / totalRequests) * 0.75) / 1000000 // 90% discount
+            cache_read: (totalCacheRead * 0.15) / 1000000, // 90% discount on cache reads
+            cache_creation: (totalCacheCreation * 1.5) / 1000000 // Regular rate for cache creation
           }
-          cachedCost.total = cachedCost.input + cachedCost.output
-          
+          cachedCost.total = cachedCost.cache_read + cachedCost.cache_creation;
+
           job.costs = {
             regular: regularCost,
             cached: cachedCost,
             total: regularCost.total + cachedCost.total,
-            savings: regularCost.total - cachedCost.total
+            savings: regularCost.total - cachedCost.cache_read // Savings from cache reads
           }
         } catch (error) {
           job.error = `Error processing results: ${error.message}`

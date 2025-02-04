@@ -60,6 +60,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     const selectedFilesDiv = document.getElementById('selected-files');
     const topicsContainer = document.getElementById('topics-container');
     const addTopicButton = document.getElementById('add-topic');
+    const csvImportInput = document.getElementById('csv-import');
+    const downloadTemplateButton = document.getElementById('download-template');
+
+    // Handle template download
+    downloadTemplateButton.addEventListener('click', () => {
+        const templateContent = `topic_name,field_name,result_format,description
+Study Characteristics,Study Design,text,Type of study (e.g. RCT, observational, etc.)
+Study Characteristics,Sample Size,number,Total number of participants in the study
+Study Characteristics,Population,text,Description of study population and inclusion criteria
+Study Characteristics,Follow-up Duration,text,Length of study follow-up period
+Clinical Outcomes,Primary Endpoint,text,Primary outcome measure of the study
+Clinical Outcomes,Effect Size,number with CI,Treatment effect with confidence interval
+Clinical Outcomes,P-value,number,Statistical significance of primary outcome
+Clinical Outcomes,Adverse Events,bullet points,List of reported adverse events
+Economic Analysis,Cost Measure,currency,Type and amount of costs analyzed
+Economic Analysis,ICER,currency/QALY,Incremental cost-effectiveness ratio
+Economic Analysis,Utility Values,number,Health state utility values used
+Economic Analysis,Time Horizon,text,Time horizon of economic analysis
+Quality Assessment,Risk of Bias,text,Assessment of study bias and limitations
+Quality Assessment,GRADE Score,text,Quality of evidence assessment
+Quality Assessment,Funding Source,text,Study sponsor and funding details`;
+
+        const blob = new Blob([templateContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'topic-template.csv';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    });
+
     const submitButton = document.getElementById('submit-query');
     const responseText = document.getElementById('response-text');
     const loadingIndicator = document.getElementById('loading');
@@ -156,6 +188,167 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 }
             }
+        }
+    });
+
+    // Helper function to parse CSV content
+    const parseCSV = (content) => {
+        const rows = content.split(/\r?\n/).filter(row => row.trim());
+        const headers = rows[0].split(',').map(h => h.trim().toLowerCase());
+        
+        // Validate required columns
+        const requiredColumns = ['topic_name', 'field_name'];
+        const missingColumns = requiredColumns.filter(col => !headers.includes(col));
+        if (missingColumns.length > 0) {
+            throw new Error(`Missing required columns: ${missingColumns.join(', ')}`);
+        }
+
+    // Parse data rows
+    const data = [];
+    for (let i = 1; i < rows.length; i++) {
+        // Initialize variables for parsing
+        const values = [];
+        let currentValue = '';
+        let insideQuotes = false;
+        const row = rows[i];
+
+        // Parse each character
+        for (let j = 0; j < row.length; j++) {
+            const char = row[j];
+            
+            if (char === '"') {
+                if (insideQuotes && row[j + 1] === '"') {
+                    // Handle escaped quotes
+                    currentValue += '"';
+                    j++;
+                } else {
+                    // Toggle quote state
+                    insideQuotes = !insideQuotes;
+                }
+            } else if (char === ',' && !insideQuotes) {
+                // End of field
+                values.push(currentValue.trim());
+                currentValue = '';
+            } else {
+                currentValue += char;
+            }
+        }
+        // Push the last field
+        values.push(currentValue.trim());
+
+        if (values.length !== headers.length) {
+            throw new Error(`Invalid CSV format in row ${i + 1}`);
+        }
+
+        const rowObj = {};
+        headers.forEach((header, index) => {
+            // Remove surrounding quotes if present
+            let value = values[index];
+            if (value.startsWith('"') && value.endsWith('"')) {
+                value = value.slice(1, -1).replace(/""/g, '"');
+            }
+            rowObj[header] = value;
+        });
+        data.push(rowObj);
+    }
+
+        return data;
+    };
+
+    // Helper function to validate and group CSV data
+    const validateAndGroupData = (data) => {
+        const topics = {};
+        
+        data.forEach((row, index) => {
+            const topicName = row.topic_name;
+            const fieldName = row.field_name;
+            
+            if (!topicName || !fieldName) {
+                throw new Error(`Missing required field in row ${index + 2}`);
+            }
+            
+            if (!topics[topicName]) {
+                topics[topicName] = [];
+            }
+            
+            // Check max fields per topic
+            if (topics[topicName].length >= 5) {
+                throw new Error(`Topic "${topicName}" exceeds maximum limit of 5 fields`);
+            }
+            
+            topics[topicName].push({
+                name: fieldName,
+                unit: row.result_format || '',
+                description: row.description || ''
+            });
+        });
+        
+        return topics;
+    };
+
+    // Helper function to create topics and fields from CSV data
+    const createTopicsFromCSV = (topics) => {
+        // Clear existing topics
+        topicsContainer.innerHTML = '';
+        
+        Object.entries(topics).forEach(([topicName, fields]) => {
+            const topicSection = createTopicSection();
+            topicSection.querySelector('.topic-name').value = topicName;
+            
+            const dataFieldsContainer = topicSection.querySelector('.data-fields-container');
+            dataFieldsContainer.innerHTML = ''; // Clear default field
+            
+            fields.forEach((field, index) => {
+                const fieldRow = createDataFieldRow();
+                fieldRow.querySelector('.field-name').value = field.name;
+                fieldRow.querySelector('.field-unit').value = field.unit;
+                fieldRow.querySelector('.field-description').value = field.description;
+                
+                // Show/hide remove button based on number of fields
+                const removeButton = fieldRow.querySelector('.remove-field');
+                removeButton.style.display = fields.length > 1 ? 'block' : 'none';
+                
+                dataFieldsContainer.appendChild(fieldRow);
+            });
+            
+            // Update add field button state
+            const addFieldButton = topicSection.querySelector('.add-field-btn');
+            addFieldButton.disabled = fields.length >= 5;
+            
+            topicsContainer.appendChild(topicSection);
+        });
+        
+        // Show/hide remove topic buttons
+        const removeTopicButtons = topicsContainer.getElementsByClassName('remove-topic');
+        Array.from(removeTopicButtons).forEach(button => {
+            button.style.display = Object.keys(topics).length > 1 ? 'block' : 'none';
+        });
+    };
+
+    // Handle CSV import
+    csvImportInput.addEventListener('change', async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        try {
+            const content = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (e) => reject(e);
+                reader.readAsText(file);
+            });
+            
+            const data = parseCSV(content);
+            const topics = validateAndGroupData(data);
+            createTopicsFromCSV(topics);
+            
+            // Clear the input
+            event.target.value = '';
+            errorMessage.style.display = 'none';
+        } catch (error) {
+            errorMessage.textContent = `CSV Import Error: ${error.message}`;
+            errorMessage.style.display = 'block';
+            event.target.value = '';
         }
     });
 
@@ -281,8 +474,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </div>
                             <div class="cost-section">
                                 <h4>Cached Costs:</h4>
-                                <div>Input: $${job.costs.cached.input.toFixed(4)}</div>
-                                <div>Output: $${job.costs.cached.output.toFixed(4)}</div>
+                                <div>Cache Read: $${job.costs.cached.cache_read.toFixed(4)}</div>
+                                <div>Cache Creation: $${job.costs.cached.cache_creation.toFixed(4)}</div>
                                 <div>Total: $${job.costs.cached.total.toFixed(4)}</div>
                             </div>
                             <div class="cost-savings">
@@ -409,39 +602,39 @@ document.addEventListener('DOMContentLoaded', async () => {
                             if (result.result?.message?.content?.[0]?.text) {
                                 const content = result.result.message.content[0].text;
                                 
-                                // Extract PDF name from custom_id by removing the -test suffix
-                                const pdfName = result.custom_id.replace('_pdf-test', '');
+                                // Extract PDF name from custom_id
+                                const pdfName = result.custom_id;
                                 
                                 // Get topic from job data
                                 const [pdfTopic] = job.topics.filter(t => 
-                                    result.custom_id.includes(t.toLowerCase().replace(/\s+/g, '_'))
-                                ) || [''];
+                                    result.custom_id.toLowerCase().includes(t.toLowerCase().replace(/\s+/g, '_'))
+                                ) || [''];                                                                
 
                                 let query = '';
                                 let thinkingProcess = '';
                                 let finalResults = '';
 
                                 // Extract thinking process
-                                const thinkingMatch = content.match(/<thinking>([\s\S]*?)<\/thinking>/);
+                                const thinkingMatch = content.match(/<thinking>([\s\S]*?)<\/thinking>/s);
                                 if (thinkingMatch) {
                                     // Extract process from thinking content
-                                    const thinkingProcessMatch = thinkingMatch[1].match(/<process>(.*?)<\/process>/);
+                                    const thinkingProcessMatch = thinkingMatch[1].match(/<process>(.*?)<\/process>/s);
                                     if (thinkingProcessMatch) {
                                         thinkingProcess = thinkingProcessMatch[1].trim();
                                     }
 
                                     // Extract query from name tag
-                                    const nameMatch = thinkingMatch[1].match(/<name>(.*?)<\/name>/);
+                                    const nameMatch = thinkingMatch[1].match(/<name>(.*?)<\/name>/s);
                                     if (nameMatch) {
                                         query = nameMatch[1].trim();
                                     }
                                 }
 
                                 // Extract final results
-                                const resultsMatch = content.match(/<results>([\s\S]*?)<\/results>/);
+                                const resultsMatch = content.match(/<results>([\s\S]*?)<\/results>/s);
                                 if (resultsMatch) {
                                     // Extract value from results content
-                                    const resultsValueMatch = resultsMatch[1].match(/<value>(.*?)<\/value>/);
+                                    const resultsValueMatch = resultsMatch[1].match(/<value>(.*?)<\/value>/s);
                                     if (resultsValueMatch) {
                                         finalResults = resultsValueMatch[1].trim();
                                     }
@@ -449,6 +642,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                                 // Escape quotes and wrap fields in quotes
                                 const escapeField = (field) => {
+                                    if (field === null || field === undefined) {
+                                        return `""`;
+                                    }
                                     return `"${field.toString().replace(/"/g, '""')}"`;
                                 };
 
