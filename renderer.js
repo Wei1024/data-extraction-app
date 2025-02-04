@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Handle template download
     downloadTemplateButton.addEventListener('click', () => {
         const templateContent = `topic_name,field_name,result_format,description
-Study Characteristics,Study Design,text,Type of study (e.g. RCT, observational, etc.)
+Study Characteristics,Study Design,text,Type of study (e.g. RCT)
 Study Characteristics,Sample Size,number,Total number of participants in the study
 Study Characteristics,Population,text,Description of study population and inclusion criteria
 Study Characteristics,Follow-up Duration,text,Length of study follow-up period
