@@ -154,7 +154,8 @@ contextBridge.exposeInMainWorld('api', {
                     type: 'base64',
                     data: base64Pdf,
                   },
-                  cache_control: { type: 'ephemeral' },
+                    cache_control: { type: 'ephemeral' },
+                    citations: { enabled: true }
                 },
                 {
                   type: 'text',
@@ -246,6 +247,7 @@ contextBridge.exposeInMainWorld('api', {
                       data: base64Pdf,
                     },
                     cache_control: options.enableCaching ? { type: 'ephemeral' } : undefined,
+                    citations: { enabled: true }
                   },
                   {
                     type: 'text',
