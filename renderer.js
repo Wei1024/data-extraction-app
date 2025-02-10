@@ -610,35 +610,14 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
                                     result.custom_id.toLowerCase().includes(t.toLowerCase().replace(/\s+/g, '_'))
                                 ) || [''];                                                                
 
-                                let query = '';
-                                let thinkingProcess = '';
-                                let finalResults = '';
+                                // Extract data from the new simplified format
+                                const dataMatch = content.match(/<data>([\s\S]*?)<\/data>/);
+                                const thinkingMatch = content.match(/<thinking>([\s\S]*?)<\/thinking>/);
+                                const resultMatch = content.match(/<result>([\s\S]*?)<\/result>/);
 
-                                // Extract thinking process
-                                const thinkingMatch = content.match(/<thinking>([\s\S]*?)<\/thinking>/s);
-                                if (thinkingMatch) {
-                                    // Extract process from thinking content
-                                    const thinkingProcessMatch = thinkingMatch[1].match(/<process>(.*?)<\/process>/s);
-                                    if (thinkingProcessMatch) {
-                                        thinkingProcess = thinkingProcessMatch[1].trim();
-                                    }
-
-                                    // Extract query from name tag
-                                    const nameMatch = thinkingMatch[1].match(/<name>(.*?)<\/name>/s);
-                                    if (nameMatch) {
-                                        query = nameMatch[1].trim();
-                                    }
-                                }
-
-                                // Extract final results
-                                const resultsMatch = content.match(/<results>([\s\S]*?)<\/results>/s);
-                                if (resultsMatch) {
-                                    // Extract value from results content
-                                    const resultsValueMatch = resultsMatch[1].match(/<value>(.*?)<\/value>/s);
-                                    if (resultsValueMatch) {
-                                        finalResults = resultsValueMatch[1].trim();
-                                    }
-                                }
+                                const query = dataMatch ? dataMatch[1].trim() : '';
+                                const thinkingProcess = thinkingMatch ? thinkingMatch[1].trim() : '';
+                                const finalResults = resultMatch ? resultMatch[1].trim() : '';
 
                                 // Escape quotes and wrap fields in quotes
                                 const escapeField = (field) => {
@@ -885,15 +864,16 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
                             totalCosts.cache_creation
                         ).toFixed(4);
 
-                        // Parse XML response
-                        const parser = new DOMParser();
+                        // Extract data from the new simplified format
+                        const content = result.content[0].text;
                         
-                        // Extract and parse thinking process
-                        const thinkingMatch = result.content[0].text.match(/<thinking>([\s\S]*?)<\/thinking>/);
-                        const resultsMatch = result.content[0].text.match(/<results>([\s\S]*?)<\/results>/);
+                        // Extract data field name, thinking process, and result
+                        const dataMatch = content.match(/<data>([\s\S]*?)<\/data>/);
+                        const thinkingMatch = content.match(/<thinking>([\s\S]*?)<\/thinking>/);
+                        const resultMatch = content.match(/<result>([\s\S]*?)<\/result>/);
                         
-                        if (!thinkingMatch || !resultsMatch) {
-                            // Handle old format or missing tags
+                        if (!dataMatch || !thinkingMatch || !resultMatch) {
+                            // Handle missing tags
                             const row = document.createElement('tr');
                             row.innerHTML = `
                                 <td>${file.name}</td>
@@ -906,67 +886,16 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
                             continue;
                         }
                         
-                        // Parse thinking XML
-                        const thinkingXml = parser.parseFromString(
-                            `<root>${thinkingMatch[1]}</root>`, 
-                            'text/xml'
-                        );
-                        
-                        // Parse results XML
-                        const resultsXml = parser.parseFromString(
-                            `<root>${resultsMatch[1]}</root>`, 
-                            'text/xml'
-                        );
-                        
-                        // Get all data entries
-                        const thinkingData = Array.from(thinkingXml.querySelectorAll('data'));
-                        const resultsData = Array.from(resultsXml.querySelectorAll('data'));
-                        
-                        // Create a row for each data entry
-                        const maxEntries = Math.max(thinkingData.length, resultsData.length);
-                        
-                        // Map thinking data to results data by name
-                        for (let k = 0; k < maxEntries; k++) {
-                            const thinkingEntry = thinkingData[k];
-                            const thinkingName = thinkingEntry?.querySelector('name')?.textContent.trim();
-                            
-                            // Find matching result entry
-                            const resultEntry = resultsData.find(entry => 
-                                entry.querySelector('name')?.textContent.trim() === thinkingName
-                            );
-                            const row = document.createElement('tr');
-                            
-                            // Add file name and topic
-                            row.innerHTML = `
-                                <td>${file.name}</td>
-                                <td>${topic.name}</td>
-                            `;
-                            
-                            // Add query from name tag
-                            if (thinkingName) {
-                                row.innerHTML += `<td>${thinkingName}</td>`;
-                            } else {
-                                row.innerHTML += '<td></td>';
-                            }
-                            
-                            // Add thinking process
-                            if (thinkingEntry) {
-                                const process = thinkingEntry.querySelector('process')?.textContent.trim() || '';
-                                row.innerHTML += `<td>${process}</td>`;
-                            } else {
-                                row.innerHTML += '<td></td>';
-                            }
-                            
-                            // Add results
-                            if (resultEntry) {
-                                const value = resultEntry.querySelector('value')?.textContent.trim() || '';
-                                row.innerHTML += `<td>${value}</td>`;
-                            } else {
-                                row.innerHTML += '<td></td>';
-                            }
-                            
-                            tbody.appendChild(row);
-                        }
+                        // Create table row with extracted data
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${file.name}</td>
+                            <td>${topic.name}</td>
+                            <td>${dataMatch[1].trim()}</td>
+                            <td>${thinkingMatch[1].trim()}</td>
+                            <td>${resultMatch[1].trim()}</td>
+                        `;
+                        tbody.appendChild(row);
                     } catch (error) {
                         // Add error result to table
                         const row = document.createElement('tr');
