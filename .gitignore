@@ -43,3 +43,7 @@ lerna-debug.log*
 
 # Optional REPL history
 .node_repl_history
+
+# test files
+test.js
+test.pdf
