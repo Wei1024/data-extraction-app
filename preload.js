@@ -177,6 +177,9 @@ contextBridge.exposeInMainWorld('api', {
 
       const data = await response.json()
       
+      // Log full API response for debugging
+      console.log('Full API Response:', JSON.stringify(data, null, 2))
+      
       // Calculate costs based on token usage
       const calculateCosts = (usage) => {
         const costs = {

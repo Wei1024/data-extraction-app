@@ -600,7 +600,8 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
                         // Extract topic and query from custom_id
                         const csv = results.results.map(result => {
                             if (result.result?.message?.content?.[0]?.text) {
-                                const content = result.result.message.content[0].text;
+                                // Get all content blocks
+                                const contentBlocks = result.result.message.content;
                                 
                                 // Extract PDF name from custom_id
                                 const pdfName = result.custom_id;
@@ -608,16 +609,60 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
                                 // Get topic from job data
                                 const [pdfTopic] = job.topics.filter(t => 
                                     result.custom_id.toLowerCase().includes(t.toLowerCase().replace(/\s+/g, '_'))
-                                ) || [''];                                                                
+                                ) || [''];
 
-                                // Extract data from the new simplified format
-                                const dataMatch = content.match(/<data>([\s\S]*?)<\/data>/);
-                                const thinkingMatch = content.match(/<thinking>([\s\S]*?)<\/thinking>/);
-                                const resultMatch = content.match(/<result>([\s\S]*?)<\/result>/);
+                                // First concatenate all content
+                                let fullText = contentBlocks.map(block => block.text).join('');
+
+                                // Extract tagged content
+                                const dataMatch = fullText.match(/<data>([\s\S]*?)<\/data>/);
+                                const thinkingMatch = fullText.match(/<thinking>([\s\S]*?)<\/thinking>/);
+                                const resultMatch = fullText.match(/<result>([\s\S]*?)<\/result>/);
 
                                 const query = dataMatch ? dataMatch[1].trim() : '';
-                                const thinkingProcess = thinkingMatch ? thinkingMatch[1].trim() : '';
+                                let processedThinking = thinkingMatch ? thinkingMatch[1].trim() : '';
                                 const finalResults = resultMatch ? resultMatch[1].trim() : '';
+
+                                // Build citations map for each text block
+                                const citationsMap = new Map();
+                                contentBlocks.forEach(block => {
+                                    if (block.type === 'text' && block.citations) {
+                                        citationsMap.set(block.text.trim(), block.citations[0]);
+                                    }
+                                });
+
+                                // Process citations
+                                let citationCounter = 1;
+                                const citationsList = [];
+
+                                // Find cited text in thinking content and add citations
+                                for (const [text, citation] of citationsMap) {
+                                    if (processedThinking.includes(text)) {
+                                        citationsList.push({
+                                            number: citationCounter,
+                                            text: citation.cited_text,
+                                            pages: `${citation.start_page_number}-${citation.end_page_number}`
+                                        });
+
+                                        // Add citation reference after the text
+                                        processedThinking = processedThinking.replace(
+                                            text,
+                                            `${text}[${citationCounter}]`
+                                        );
+                                        citationCounter++;
+                                    }
+                                }
+
+                                // Format citations with extra line breaks
+                                const formattedCitations = citationsList.length > 0 
+                                    ? citationsList.map(citation => 
+                                        `${citation.number}. Pages ${citation.pages}: ${citation.text}`
+                                    ).join('\n\n')
+                                    : '';
+
+                                // Use processed thinking with citations and formatted citations
+                                const thinkingProcess = processedThinking;
+                                const citationsText = formattedCitations || '';
 
                                 // Escape quotes and wrap fields in quotes
                                 const escapeField = (field) => {
@@ -632,13 +677,14 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
                                     escapeField(pdfTopic),
                                     escapeField(query),
                                     escapeField(thinkingProcess),
-                                    escapeField(finalResults)
+                                    escapeField(finalResults),
+                                    escapeField(citationsText)
                                 ].join(',');
                             }
                             return `"${result.custom_id}","","","Error: No content","Error: No content"`;
                         }).join('\n');
                         
-                        const header = 'PDF Name,Topic,Query,Thinking Process,Final Results\n';
+                        const header = 'PDF Name,Topic,Query,Thinking Process,Final Results,Citations\n';
                         const blob = new Blob([header + csv], { type: 'text/csv;charset=utf-8;' });
                         const link = document.createElement('a');
                         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -864,14 +910,14 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
                             totalCosts.cache_creation
                         ).toFixed(4);
 
-                        // Extract data from the new simplified format
-                        const content = result.content[0].text;
-                        
-                        // Extract data field name, thinking process, and result
-                        const dataMatch = content.match(/<data>([\s\S]*?)<\/data>/);
-                        const thinkingMatch = content.match(/<thinking>([\s\S]*?)<\/thinking>/);
-                        const resultMatch = content.match(/<result>([\s\S]*?)<\/result>/);
-                        
+                        // First concatenate all content
+                        let fullText = result.content.map(block => block.text).join('');
+
+                        // Extract tagged content
+                        const dataMatch = fullText.match(/<data>([\s\S]*?)<\/data>/);
+                        const thinkingMatch = fullText.match(/<thinking>([\s\S]*?)<\/thinking>/);
+                        const resultMatch = fullText.match(/<result>([\s\S]*?)<\/result>/);
+
                         if (!dataMatch || !thinkingMatch || !resultMatch) {
                             // Handle missing tags
                             const row = document.createElement('tr');
@@ -881,19 +927,61 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
                                 <td>${topic.query}</td>
                                 <td>No structured data found</td>
                                 <td>No structured data found</td>
+                                <td>No citations available</td>
                             `;
                             tbody.appendChild(row);
                             continue;
                         }
-                        
-                        // Create table row with extracted data
+
+                        // Extract content
+                        const queryContent = dataMatch[1].trim();
+                        let processedThinking = thinkingMatch[1].trim();
+                        const finalResult = resultMatch[1].trim();
+
+                        // Build citations map for each text block
+                        const citationsMap = new Map();
+                        result.content.forEach(block => {
+                            if (block.type === 'text' && block.citations) {
+                                citationsMap.set(block.text.trim(), block.citations[0]);
+                            }
+                        });
+
+                        // Process citations
+                        let citationCounter = 1;
+                        const citationsList = [];
+
+                        // Find cited text in thinking content and add citations
+                        for (const [text, citation] of citationsMap) {
+                            if (processedThinking.includes(text)) {
+                                citationsList.push({
+                                    number: citationCounter,
+                                    text: citation.cited_text,
+                                    pages: `${citation.start_page_number}-${citation.end_page_number}`
+                                });
+
+                                // Add citation reference after the text
+                                processedThinking = processedThinking.replace(
+                                    text,
+                                    `${text}[${citationCounter}]`
+                                );
+                                citationCounter++;
+                            }
+                        }
+
+                        // Format citations as a numbered list with extra line breaks between references
+                        const formattedCitations = citationsList.map(citation => 
+                            `${citation.number}. Pages ${citation.pages}: ${citation.text}`
+                        ).join('\n\n');
+
+                        // Create table row with processed data
                         const row = document.createElement('tr');
                         row.innerHTML = `
                             <td>${file.name}</td>
                             <td>${topic.name}</td>
-                            <td>${dataMatch[1].trim()}</td>
-                            <td>${thinkingMatch[1].trim()}</td>
-                            <td>${resultMatch[1].trim()}</td>
+                            <td>${queryContent}</td>
+                            <td>${processedThinking}</td>
+                            <td>${finalResult}</td>
+                            <td>${formattedCitations || 'No citations available'}</td>
                         `;
                         tbody.appendChild(row);
                     } catch (error) {
@@ -903,7 +991,7 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
                             <td>${file.name}</td>
                             <td>${topic.name}</td>
                             <td>${topic.query}</td>
-                            <td class="error" colspan="2">Error: ${error.message}</td>
+                            <td class="error" colspan="3">Error: ${error.message}</td>
                         `;
                         tbody.appendChild(row);
                     }
