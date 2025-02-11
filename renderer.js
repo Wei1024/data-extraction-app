@@ -494,32 +494,14 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
         });
     };
 
-    // Enhanced batch mode toggle
+    // Batch mode toggle handler
     if (batchModeToggle) {
-        const batchModeOptions = document.createElement('div');
-        batchModeOptions.className = 'batch-mode-options';
-        batchModeOptions.innerHTML = `
-            <div class="option">
-                <label>
-                    <input type="checkbox" id="enable-caching" checked>
-                    Enable Caching (recommended for similar content)
-                </label>
-                <div class="option-description">
-                    Caching can reduce costs by up to 90% for similar content within 5 minutes
-                </div>
-            </div>
-            <div class="batch-size-warning" style="display: none;">
-                Warning: Current batch size approaching 256MB limit
-            </div>
-        `;
-        batchModeToggle.parentNode.appendChild(batchModeOptions);
-
         batchModeToggle.addEventListener('change', () => {
             const isBatchMode = batchModeToggle.checked;
             document.body.classList.toggle('batch-mode', isBatchMode);
             batchJobsContainer.style.display = isBatchMode ? 'block' : 'none';
             submitButton.textContent = isBatchMode ? 'Submit Batch Job' : 'Submit Query';
-            batchModeOptions.style.display = isBatchMode ? 'block' : 'none';
+            document.querySelector('.batch-options').style.display = isBatchMode ? 'block' : 'none';
         });
     }
 

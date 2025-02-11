@@ -7,122 +7,153 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Automatic AI Data Extraction Application</h1>
-        
-        <div class="api-key-section">
-            <label for="api-key">Anthropic API Key:</label>
-            <div class="api-key-input-container">
-                <input type="password" id="api-key" placeholder="Enter your Anthropic API key">
-                <button id="save-api-key" class="api-key-btn">Save API Key</button>
+    <div class="app-container">
+        <div class="sidebar">
+            <div class="api-key-section">
+                <h3>API Configuration</h3>
+                <label for="api-key">Anthropic API Key:</label>
+                <div class="api-key-input-container">
+                    <input type="password" id="api-key" placeholder="Enter your Anthropic API key">
+                    <button id="save-api-key" class="api-key-btn">Save API Key</button>
+                </div>
+                <p id="api-key-status" class="status-message"></p>
             </div>
-            <p id="api-key-status" class="status-message"></p>
-        </div>
-        
-        <div class="upload-section">
-            <label for="pdf-file" class="file-label">Choose PDF File(s)</label>
-            <input type="file" id="pdf-file" accept=".pdf" class="file-input" multiple>
-            <div id="selected-files" class="file-names"></div>
-        </div>
+            
+            <div class="upload-section">
+                <label for="pdf-file" class="file-label">Choose PDF File(s)</label>
+                <input type="file" id="pdf-file" accept=".pdf" class="file-input" multiple>
+                <div id="selected-files" class="file-names"></div>
+            </div>
 
-        <div class="mode-toggle">
-            <label class="toggle-label">
-                <input type="checkbox" id="batch-mode-toggle">
-                <span class="toggle-text">Batch Mode</span>
-                <span class="toggle-description">(Lower cost, results within 24 hours)</span>
-            </label>
-        </div>
-
-        <div class="query-section">
-            <div class="topic-templates">
-                <h3>CSV templates for batch queries</h3>
-                <p class="template-description">Use our example template as a starting point, or import your own CSV file with predefined extraction fields</p>
-                <div class="template-buttons">
-                    <button id="download-template" class="template-btn">Download Example Template</button>
-                    <label for="csv-import" class="template-btn">Import Topics from CSV</label>
-                    <input type="file" id="csv-import" accept=".csv" class="file-input">
+            <div class="mode-toggle">
+                <label class="toggle-label">
+                    <input type="checkbox" id="batch-mode-toggle">
+                    <span class="toggle-text">Batch Mode</span>
+                    <span class="toggle-description">(Lower cost, results within 24 hours)</span>
+                </label>
+                <div class="batch-options" style="display: none;">
+                    <label class="toggle-label">
+                        <input type="checkbox" id="enable-caching" checked>
+                        <span class="toggle-text">Enable Caching</span>
+                        <span class="info-icon" title="Caching can reduce costs by up to 90% for similar content within 5 minutes">ⓘ</span>
+                    </label>
                 </div>
             </div>
-            <div id="topics-container">
-                <h3>Manual inputs</h3>
-                <p class="input-description">You can also manually input the data fields you wish to extract.</p>
-                <div class="topic-section">
-                    <div class="topic-header">
-                        <input type="text" class="topic-name" placeholder="Topic name (required)" required>
-                        <button type="button" class="remove-topic" style="display: none;">Remove Topic</button>
+        </div>
+
+        <div class="main-content">
+            <div class="query-section">
+                <div class="section-header">
+                    <h2>Query Builder</h2>
+                    <p class="section-description">Choose how you want to define your data extraction fields</p>
+                </div>
+
+                <!-- Method 1: Bulk Import -->
+                <div class="input-method-card bulk-import">
+                    <div class="method-header">
+                        <span class="method-icon">📄</span>
+                        <h3>Bulk Import via CSV</h3>
                     </div>
-                    <div class="data-fields-container">
-                        <div class="data-field-row">
-                            <input type="text" class="field-name" placeholder="Data field name (required)" required>
-                            <input type="text" class="field-unit" placeholder="Result format" title="Expected result format (e.g., number list, bullet points)">
-                            <input type="text" class="field-description" placeholder="Description (optional but recommended)">
-                            <button type="button" class="remove-field" style="display: none;">-</button>
+                    <p class="method-description">Upload multiple extraction fields at once using a CSV file</p>
+                    <div class="template-buttons">
+                        <button id="download-template" class="secondary-btn">Download Example Template</button>
+                        <button id ="csv-import" class="secondary-btn">Import from CSV</button>
+                        <input type="file" id="csv-import" accept=".csv" class="file-input">
+                    </div>
+                </div>
+
+                <div class="method-divider">
+                    <span class="divider-text">or</span>
+                </div>
+
+                <!-- Method 2: Individual Entry -->
+                <div class="input-method-card individual-entry">
+                    <div class="method-header">
+                        <span class="method-icon">✏️</span>
+                        <h3>Individual Field Entry</h3>
+                    </div>
+                    <p class="method-description">Define single extraction fields one at a time</p>
+                    <div id="topics-container">
+                        <div class="topic-section">
+                            <div class="topic-header">
+                                <input type="text" class="topic-name" placeholder="Topic name (required)" required>
+                                <button type="button" class="remove-topic" style="display: none;">Remove Topic</button>
+                            </div>
+                            <div class="data-fields-container">
+                                <div class="data-field-row">
+                                    <input type="text" class="field-name" placeholder="Data field name (required)" required>
+                                    <input type="text" class="field-unit" placeholder="Result format" title="Expected result format (e.g., number list, bullet points)">
+                                    <input type="text" class="field-description" placeholder="Description (optional but recommended)">
+                                    <button type="button" class="remove-field" style="display: none;">-</button>
+                                </div>
+                            </div>
+                            <button type="button" class="add-field-btn">+</button>
                         </div>
                     </div>
-                    <button type="button" class="add-field-btn">+</button>
+                </div>
+
+                <div class="action-buttons">
+                    <button type="button" id="add-topic" class="primary-btn">Add New Topic</button>
+                    <button id="submit-query" class="primary-btn">Submit Query</button>
                 </div>
             </div>
-            <div class="topic-controls">
-                <button type="button" id="add-topic" class="add-topic-btn">Add New Topic</button>
-            </div>
-            <button id="submit-query" class="submit-btn">Submit Query</button>
-        </div>
 
-        <div id="batch-jobs-container" class="batch-jobs-section" style="display: none;">
-            <div class="batch-jobs-header">
-                <h2>Batch Jobs</h2>
-                <button id="refresh-batch-status" class="refresh-btn">Refresh Status</button>
+            <div id="batch-jobs-container" class="batch-jobs-section" style="display: none;">
+                <div class="batch-jobs-header">
+                    <h2>Batch Jobs</h2>
+                    <button id="refresh-batch-status" class="refresh-btn">Refresh Status</button>
+                </div>
+                <div id="batch-jobs-list" class="batch-jobs-list"></div>
             </div>
-            <div id="batch-jobs-list" class="batch-jobs-list"></div>
-        </div>
 
-        <div class="result-section">
-            <div class="cost-summary" style="display: none;">
-                <h3>Token Usage & Cost Summary</h3>
-                <div class="cost-details">
-                    <div class="token-usage">
-                        <h4>Token Usage</h4>
-                        <p>Input Tokens: <span id="input-tokens">0</span></p>
-                        <p>Output Tokens: <span id="output-tokens">0</span></p>
-                        <p>Cache Read Tokens: <span id="cache-read-tokens">0</span></p>
-                        <p>Cache Creation Tokens: <span id="cache-creation-tokens">0</span></p>
+            <div class="result-section">
+                <div class="cost-summary" style="display: none;">
+                    <h3>Token Usage & Cost Summary</h3>
+                    <div class="cost-details">
+                        <div class="token-usage">
+                            <h4>Token Usage</h4>
+                            <p>Input Tokens: <span id="input-tokens">0</span></p>
+                            <p>Output Tokens: <span id="output-tokens">0</span></p>
+                            <p>Cache Read Tokens: <span id="cache-read-tokens">0</span></p>
+                            <p>Cache Creation Tokens: <span id="cache-creation-tokens">0</span></p>
+                        </div>
+                        <div class="cost-breakdown">
+                            <h4>Cost Breakdown (USD)</h4>
+                            <p>Input Cost: $<span id="input-cost">0.00</span></p>
+                            <p>Output Cost: $<span id="output-cost">0.00</span></p>
+                            <p>Cache Read Cost: $<span id="cache-read-cost">0.00</span></p>
+                            <p>Cache Creation Cost: $<span id="cache-creation-cost">0.00</span></p>
+                            <p class="total-cost">Total Cost: $<span id="total-cost">0.00</span></p>
+                        </div>
                     </div>
-                    <div class="cost-breakdown">
-                        <h4>Cost Breakdown (USD)</h4>
-                        <p>Input Cost: $<span id="input-cost">0.00</span></p>
-                        <p>Output Cost: $<span id="output-cost">0.00</span></p>
-                        <p>Cache Read Cost: $<span id="cache-read-cost">0.00</span></p>
-                        <p>Cache Creation Cost: $<span id="cache-creation-cost">0.00</span></p>
-                        <p class="total-cost">Total Cost: $<span id="total-cost">0.00</span></p>
+                </div>
+                <h2>Response:</h2>
+                <div class="table-container">
+                    <div class="table-header">
+                        <table id="response-table" class="response-table" style="display: none;">
+                            <thead>
+                                <tr>
+                                    <th>PDF Name</th>
+                                    <th>Topic</th>
+                                    <th>Query</th>
+                                    <th>Thinking Process</th>
+                                    <th>Final Results</th>
+                                    <th>Citations</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                        <button id="download-csv" class="download-btn" style="display: none;">Download Results as CSV</button>
                     </div>
                 </div>
+                <div id="response-text" class="response" style="display: none;"></div>
+                <div id="loading" class="loading" style="display: none;">Processing...</div>
             </div>
-            <h2>Response:</h2>
-            <div class="table-container">
-                <div class="table-header">
-                    <table id="response-table" class="response-table" style="display: none;">
-                        <thead>
-                            <tr>
-                                <th>PDF Name</th>
-                                <th>Topic</th>
-                                <th>Query</th>
-                                <th>Thinking Process</th>
-                                <th>Final Results</th>
-                                <th>Citations</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                    <button id="download-csv" class="download-btn" style="display: none;">Download Results as CSV</button>
-                </div>
-            </div>
-            <div id="response-text" class="response" style="display: none;"></div>
-            <div id="loading" class="loading" style="display: none;">Processing...</div>
         </div>
-
-        <div class="status-section">
-            <p id="error-message" class="error"></p>
-        </div>
+    </div>
+    <div class="status-bar">
+        <div class="status-message">Ready</div>
+        <div id="error-message" class="error"></div>
     </div>
     <script src="renderer.js"></script>
 </body>
