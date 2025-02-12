@@ -23,6 +23,24 @@
                 <label for="pdf-file" class="file-label">Choose PDF File(s)</label>
                 <input type="file" id="pdf-file" accept=".pdf" class="file-input" multiple>
                 <div id="selected-files" class="file-names"></div>
+                <div class="file-restrictions">
+                    <div class="restriction-item">
+                        <span class="restriction-icon">📦</span>
+                        <span class="restriction-text">Maximum size: 32MB</span>
+                    </div>
+                    <div class="restriction-item">
+                        <span class="restriction-icon">📄</span>
+                        <span class="restriction-text">Maximum pages: 100</span>
+                    </div>
+                    <div class="restriction-item">
+                        <span class="restriction-icon">🔒</span>
+                        <span class="restriction-text">Format: Standard PDF (no passwords/encryption)</span>
+                    </div>
+                    <div class="restriction-item">
+                        <span class="restriction-icon">📊</span>
+                        <span class="restriction-text">Batch limit: 100,000 messages or 256 MB</span>
+                    </div>
+                </div>
             </div>
 
             <div class="mode-toggle">
