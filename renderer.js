@@ -548,6 +548,11 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
                     batchSizeWarning.style.display = 'none';
                     batchSizeWarning.textContent = '';
                 }
+
+                // Clear all batch jobs when switching to single mode
+                window.api.clearBatchJobs();
+                const batchJobsList = document.getElementById('batch-jobs-list');
+                batchJobsList.innerHTML = '';
             }
             
             // Update submit button text
@@ -839,6 +844,19 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
         }
 
         try {
+            if (isBatchMode) {
+                // Check for existing jobs
+                const existingJobs = window.api.listBatchJobs({ includeExpired: false });
+                if (existingJobs.length > 0) {
+                    const shouldProceed = confirm('You have existing batch jobs. Starting a new job will clear all completed jobs. Do you want to proceed?');
+                    if (!shouldProceed) {
+                        return;
+                    }
+                    // Clear completed jobs before starting new one
+                    window.api.clearBatchJobs();
+                }
+            }
+
             errorMessage.style.display = 'none';
             loadingIndicator.style.display = 'block';
             submitButton.disabled = true;

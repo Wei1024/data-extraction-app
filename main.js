@@ -2,6 +2,7 @@ const { app, BrowserWindow, session, ipcMain } = require('electron')
 const path = require('path')
 const { Anthropic } = require('@anthropic-ai/sdk')
 const keytar = require('keytar')
+const { MODEL_CONFIG, API_ENDPOINTS } = require('./config/anthropic')
 
 // Service name for keytar (must match preload.js)
 const SERVICE_NAME = 'pdf-query-app'
@@ -39,6 +40,11 @@ function createWindow () {
     win.webContents.openDevTools()
   }
 
+  // Clear batch jobs before window closes
+  win.on('close', () => {
+    win.webContents.send('clear-batch-jobs')
+  })
+
   // Handle batch results streaming
   ipcMain.handle('stream-batch-results', async (event, batchId) => {
     try {
@@ -47,7 +53,10 @@ function createWindow () {
         throw new Error('API key not found')
       }
 
-      const anthropic = new Anthropic({ apiKey })
+      const anthropic = new Anthropic({ 
+        apiKey,
+        apiVersion: MODEL_CONFIG.api_version
+      })
       const results = []
 
       // Stream results using the SDK

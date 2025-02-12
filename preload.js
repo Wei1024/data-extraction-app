@@ -4,6 +4,7 @@ const keytar = require('keytar')
 const path = require('path')
 const Anthropic = require('@anthropic-ai/sdk')
 const { getExtractionPrompt } = require('./promptTemplates')
+const { MODEL_CONFIG, COST_CONFIG, BATCH_CONFIG, API_ENDPOINTS } = require('./config/anthropic')
 
 // Store for batch jobs with enhanced tracking
 const batchJobs = new Map()
@@ -20,7 +21,6 @@ const BATCH_CONSTANTS = {
 const calculateBatchSize = (requests) => {
   return new Blob([JSON.stringify({ requests })]).size
 }
-
 
 // Retry configuration
 const RETRY_CONFIG = {
@@ -96,9 +96,19 @@ const retryWithExponentialBackoff = async (operation, onRetry) => {
 const SERVICE_NAME = 'pdf-query-app'
 const ACCOUNT_NAME = 'anthropic-api-key'
 
+// Listen for clear batch jobs event from main process
+ipcRenderer.on('clear-batch-jobs', () => {
+  batchJobs.clear()
+})
+
 contextBridge.exposeInMainWorld('api', {
   version: process.versions.node,
-  constants: BATCH_CONSTANTS,
+  constants: BATCH_CONFIG,
+  
+  // Clear all batch jobs
+  clearBatchJobs: () => {
+    batchJobs.clear()
+  },
   
   // API Key Management
   saveApiKey: async (apiKey) => {
@@ -134,16 +144,16 @@ contextBridge.exposeInMainWorld('api', {
 
     // Define the API call operation
     const makeRequest = async () => {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      const response = await fetch(API_ENDPOINTS.messages, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01'
+          'anthropic-version': MODEL_CONFIG.api_version
         },
         body: JSON.stringify({
-          model: 'claude-3-5-sonnet-20241022',
-          max_tokens: 1024,
+          model: MODEL_CONFIG.name,
+          max_tokens: MODEL_CONFIG.max_tokens,
           messages: [
             {
               content: [
@@ -183,10 +193,10 @@ contextBridge.exposeInMainWorld('api', {
       // Calculate costs based on token usage
       const calculateCosts = (usage) => {
         const costs = {
-          input: (usage.input_tokens || 0) * (3 / 1000000),
-          output: (usage.output_tokens || 0) * (15 / 1000000),
-          cache_read: (usage.cache_read_input_tokens || 0) * (0.30 / 1000000),
-          cache_creation: (usage.cache_creation_input_tokens || 0) * (3.75 / 1000000)
+          input: (usage.input_tokens || 0) * COST_CONFIG.regular.input.per_token,
+          output: (usage.output_tokens || 0) * COST_CONFIG.regular.output.per_token,
+          cache_read: (usage.cache_read_input_tokens || 0) * COST_CONFIG.cache.read.per_token,
+          cache_creation: (usage.cache_creation_input_tokens || 0) * COST_CONFIG.cache.creation.per_token
         }
         
         costs.total = costs.input + costs.output + costs.cache_read + costs.cache_creation
@@ -217,13 +227,23 @@ contextBridge.exposeInMainWorld('api', {
     }
   },
 
-  // Enhanced batch query submission with individual field queries
+  // Enhanced batch query submission
   submitBatchQuery: async (files, fields, options = {}) => {
     // Get API key
     const apiKey = await keytar.getPassword(SERVICE_NAME, ACCOUNT_NAME)
     if (!apiKey) {
       throw new Error('Please save your Anthropic API key first')
     }
+
+    // Clear all completed and cancelled jobs before submitting new job
+    const jobsToKeep = new Map()
+    batchJobs.forEach((job, id) => {
+      if (job.processing_status === 'in_progress' && !job.cancel_initiated_at) {
+        jobsToKeep.set(id, job)
+      }
+    })
+    batchJobs.clear()
+    jobsToKeep.forEach((job, id) => batchJobs.set(id, job))
 
     const requests = []
     let totalSize = 0
@@ -238,7 +258,7 @@ contextBridge.exposeInMainWorld('api', {
         const request = {
           custom_id: customId,
           params: {
-            max_tokens: 1024,
+            max_tokens: MODEL_CONFIG.max_tokens,
             messages: [
               {
                 content: [
@@ -260,13 +280,13 @@ contextBridge.exposeInMainWorld('api', {
                 role: 'user',
               },
             ],
-            model: 'claude-3-5-sonnet-20241022',
+            model: MODEL_CONFIG.name,
           },
         }
 
         // Check batch size limit
         const requestSize = new Blob([JSON.stringify(request)]).size
-        if (totalSize + requestSize > BATCH_CONSTANTS.MAX_BATCH_SIZE) {
+        if (totalSize + requestSize > BATCH_CONFIG.MAX_BATCH_SIZE) {
           throw new Error('Batch size would exceed 256MB limit. Please reduce the number of files or split into multiple batches.')
         }
         
@@ -276,12 +296,12 @@ contextBridge.exposeInMainWorld('api', {
     }
 
     // Submit batch request
-    const response = await fetch('https://api.anthropic.com/v1/messages/batches', {
+    const response = await fetch(API_ENDPOINTS.batches, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
+        'anthropic-version': MODEL_CONFIG.api_version
       },
       body: JSON.stringify({ requests })
     })
@@ -421,7 +441,7 @@ contextBridge.exposeInMainWorld('api', {
             total: totalRequests
           }
           
-          // Calculate costs using actual token counts from API
+          // Calculate costs using actual token counts
           let totalRegularInput = 0;
           let totalRegularOutput = 0;
           let totalCacheRead = 0;
@@ -440,14 +460,14 @@ contextBridge.exposeInMainWorld('api', {
 
           // Calculate costs using actual token counts
           const regularCost = {
-            input: (totalRegularInput * 1.5) / 1000000,
-            output: (totalRegularOutput * 7.5) / 1000000
+            input: totalRegularInput * COST_CONFIG.batch.input.per_token,  // Using batch pricing
+            output: totalRegularOutput * COST_CONFIG.batch.output.per_token  // Using batch pricing
           }
           regularCost.total = regularCost.input + regularCost.output;
 
           const cachedCost = {
-            cache_read: (totalCacheRead * 0.15) / 1000000, // 90% discount on cache reads
-            cache_creation: (totalCacheCreation * 1.5) / 1000000 // Regular rate for cache creation
+            cache_read: totalCacheRead * COST_CONFIG.cache.read.per_token,
+            cache_creation: totalCacheCreation * COST_CONFIG.cache.creation.per_token
           }
           cachedCost.total = cachedCost.cache_read + cachedCost.cache_creation;
 
@@ -455,7 +475,9 @@ contextBridge.exposeInMainWorld('api', {
             regular: regularCost,
             cached: cachedCost,
             total: regularCost.total + cachedCost.total,
-            savings: regularCost.total - cachedCost.cache_read // Savings from cache reads
+            savings: (totalRegularInput * COST_CONFIG.regular.input.per_token + 
+                     totalRegularOutput * COST_CONFIG.regular.output.per_token) - 
+                    regularCost.total // Savings compared to regular pricing
           }
         } catch (error) {
           job.error = `Error processing results: ${error.message}`
