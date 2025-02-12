@@ -57,7 +57,7 @@
                     <p class="method-description">Upload multiple extraction fields at once using a CSV file</p>
                     <div class="template-buttons">
                         <button id="download-template" class="secondary-btn">Download Example Template</button>
-                        <button id ="csv-import" class="secondary-btn">Import from CSV</button>
+                        <label for="csv-import" class="secondary-btn">Import from CSV</label>
                         <input type="file" id="csv-import" accept=".csv" class="file-input">
                     </div>
                 </div>
@@ -99,14 +99,15 @@
             </div>
 
             <div id="batch-jobs-container" class="batch-jobs-section" style="display: none;">
-                <div class="batch-jobs-header">
+                <div class="section-header">
                     <h2>Batch Jobs</h2>
+                    <p class="section-description">Monitor and refresh the status of your batch processing jobs</p>
                     <button id="refresh-batch-status" class="refresh-btn">Refresh Status</button>
                 </div>
                 <div id="batch-jobs-list" class="batch-jobs-list"></div>
             </div>
 
-            <div class="result-section">
+            <div id="single-mode-results" class="result-section">
                 <div class="cost-summary" style="display: none;">
                     <h3>Token Usage & Cost Summary</h3>
                     <div class="cost-details">
@@ -127,7 +128,10 @@
                         </div>
                     </div>
                 </div>
-                <h2>Response:</h2>
+                <div class="section-header">
+                    <h2>Response</h2>
+                    <p class="section-description">View and download your data extraction results</p>
+                </div>
                 <div class="table-container">
                     <div class="table-header">
                         <table id="response-table" class="response-table" style="display: none;">

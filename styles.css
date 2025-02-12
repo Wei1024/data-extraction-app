@@ -521,13 +521,19 @@ input[type="checkbox"]:focus {
     margin-top: var(--spacing-lg);
 }
 
-.batch-jobs-header {
+/* Batch Jobs Section Header */
+.batch-jobs-section .section-header {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    gap: var(--spacing-sm);
     margin-bottom: var(--spacing-lg);
     padding-bottom: var(--spacing-md);
     border-bottom: 1px solid var(--color-border);
+}
+
+.batch-jobs-section .section-header .refresh-btn {
+    align-self: flex-end;
+    margin-top: var(--spacing-sm);
 }
 
 /* Cost Summary */
@@ -606,6 +612,66 @@ input[type="checkbox"]:focus {
 }
 
 .add-field-btn:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Remove field button (-) */
+.remove-field {
+    width: 36px;
+    height: 42px; /* Match input height */
+    border: none;
+    border-radius: var(--border-radius-sm);
+    background: var(--color-error);
+    color: var(--color-white);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    font-size: 18px;
+    line-height: 1;
+}
+
+/* Remove topic button */
+.remove-topic {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: none;
+    border-radius: var(--border-radius-sm);
+    background: var(--color-error);
+    color: var(--color-white);
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s;
+    margin-top: var(--spacing-sm);
+}
+
+/* Refresh batch status button */
+.refresh-btn {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: none;
+    border-radius: var(--border-radius-sm);
+    background: var(--gradient-teal);
+    color: var(--color-white);
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+/* Hover and active states for new buttons */
+.remove-field:hover,
+.remove-topic:hover,
+.refresh-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.remove-field:active,
+.remove-topic:active,
+.refresh-btn:active {
     transform: translateY(0);
     box-shadow: var(--shadow-sm);
 }

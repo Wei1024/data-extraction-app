@@ -498,10 +498,66 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
     if (batchModeToggle) {
         batchModeToggle.addEventListener('change', () => {
             const isBatchMode = batchModeToggle.checked;
+            
+            // Update UI mode
             document.body.classList.toggle('batch-mode', isBatchMode);
-            batchJobsContainer.style.display = isBatchMode ? 'block' : 'none';
+            
+            if (isBatchMode) {
+                // Switching to batch mode
+                // Hide single mode results section
+                document.getElementById('single-mode-results').style.display = 'none';
+                
+                // Show batch mode elements
+                batchJobsContainer.style.display = 'block';
+                document.querySelector('.batch-options').style.display = 'block';
+            } else {
+                // Switching to regular mode
+                // Show single mode results section
+                document.getElementById('single-mode-results').style.display = 'block';
+                
+                // Hide batch mode elements
+                batchJobsContainer.style.display = 'none';
+                document.querySelector('.batch-options').style.display = 'none';
+                
+                // Reset single mode elements
+                const responseTable = document.getElementById('response-table');
+                const tbody = responseTable.querySelector('tbody');
+                tbody.innerHTML = '';
+                responseTable.style.display = 'none';
+                responseText.style.display = 'none';
+                downloadButton.style.display = 'none';
+                
+                // Reset cost summary
+                const costSummary = document.querySelector('.cost-summary');
+                costSummary.style.display = 'none';
+                document.getElementById('input-tokens').textContent = '0';
+                document.getElementById('output-tokens').textContent = '0';
+                document.getElementById('cache-read-tokens').textContent = '0';
+                document.getElementById('cache-creation-tokens').textContent = '0';
+                document.getElementById('input-cost').textContent = '0.0000';
+                document.getElementById('output-cost').textContent = '0.0000';
+                document.getElementById('cache-read-cost').textContent = '0.0000';
+                document.getElementById('cache-creation-cost').textContent = '0.0000';
+                document.getElementById('total-cost').textContent = '0.0000';
+                
+                // Reset batch size warning if present
+                const batchSizeWarning = document.querySelector('.batch-size-warning');
+                if (batchSizeWarning) {
+                    batchSizeWarning.style.display = 'none';
+                    batchSizeWarning.textContent = '';
+                }
+            }
+            
+            // Update submit button text
             submitButton.textContent = isBatchMode ? 'Submit Batch Job' : 'Submit Query';
-            document.querySelector('.batch-options').style.display = isBatchMode ? 'block' : 'none';
+            
+            // Clear any error messages
+            errorMessage.style.display = 'none';
+            errorMessage.textContent = '';
+            
+            // Reset loading indicator
+            loadingIndicator.style.display = 'none';
+            loadingIndicator.textContent = 'Processing...';
         });
     }
 
