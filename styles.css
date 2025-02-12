@@ -74,15 +74,23 @@ body {
 
 /* Status Bar */
 .status-bar {
-    height: 24px;
+    height: 40px;
     background-color: var(--color-white);
     color: var(--color-text);
     display: flex;
     align-items: center;
-    padding: 0 var(--spacing-md);
-    font-size: 12px;
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: 14px;
     justify-content: space-between;
     border-top: 1px solid var(--color-border);
+    box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.status-bar .error {
+    color: var(--color-error);
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-weight: 500;
+    border-left: 3px solid var(--color-error);
 }
 
 /* Section Styles */
@@ -281,7 +289,7 @@ input[type="password"]:focus {
     border: 1px solid var(--color-border);
     border-radius: var(--border-radius-md);
     padding: var(--spacing-lg);
-    margin-bottom: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
     box-sizing: border-box;
     width: 100%;
 }
@@ -300,7 +308,7 @@ input[type="password"]:focus {
 .data-field-row {
     display: flex;
     gap: var(--spacing-md);
-    margin-bottom: var(--spacing-lg);
+    margin-bottom: var(--spacing-sm);
     align-items: center;
     padding: 0 var(--spacing-md);
 }
@@ -314,7 +322,7 @@ input[type="password"]:focus {
 }
 
 .data-fields-container {
-    margin-top: var(--spacing-lg);
+    margin-top: var(--spacing-sm);
 }
 
 .topic-templates {
@@ -372,6 +380,8 @@ input[type="password"]:focus {
     padding: var(--spacing-sm) var(--spacing-md);
     border-bottom: 1px solid var(--color-border);
     font-size: 14px;
+    white-space: pre-line;
+    vertical-align: top;
 }
 
 /* Status Messages */
@@ -544,10 +554,43 @@ input[type="checkbox"]:focus {
     margin-bottom: var(--spacing-lg);
 }
 
+.total-cost {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-md);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.total-cost .amount {
+    color: var(--color-teal);
+}
+
 .cost-details {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--spacing-lg);
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-md);
+    font-size: 14px;
+    color: var(--color-text-light);
+}
+
+.cost-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-sm);
+    background-color: var(--color-bg);
+    border-radius: var(--border-radius-sm);
+}
+
+.cost-item .label {
+    font-weight: 500;
+}
+
+.cost-item .amount {
+    font-family: monospace;
+    font-weight: 600;
 }
 
 /* Scrollbar Styling */
@@ -566,6 +609,100 @@ input[type="checkbox"]:focus {
 
 ::-webkit-scrollbar-thumb:hover {
     background: var(--color-teal-dark);
+}
+
+/* Job Status Styles */
+.job-status {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--border-radius-sm);
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: capitalize;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.job-status::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.job-status.in-progress {
+    background-color: rgba(255, 193, 7, 0.15);
+    color: #856404;
+}
+
+.job-status.in-progress::before {
+    background-color: var(--color-warning);
+    animation: pulse 2s infinite;
+}
+
+.job-status.ended {
+    background-color: rgba(40, 167, 69, 0.15);
+    color: #155724;
+}
+
+.job-status.ended::before {
+    background-color: var(--color-success);
+}
+
+.job-status.canceling {
+    background-color: rgba(108, 117, 125, 0.15);
+    color: #495057;
+}
+
+.job-status.canceling::before {
+    background-color: #6c757d;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.2);
+        opacity: 0.7;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Cancel Button */
+.cancel-btn {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: none;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    background: var(--gradient-teal);
+    color: var(--color-white);
+    text-decoration: none;
+    height: 28px;
+    line-height: 1;
+}
+
+.cancel-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.cancel-btn:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
 }
 
 /* Responsive Design */

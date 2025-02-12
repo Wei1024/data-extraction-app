@@ -217,8 +217,8 @@ contextBridge.exposeInMainWorld('api', {
     }
   },
 
-  // Enhanced batch query submission
-  submitBatchQuery: async (files, topics, options = {}) => {
+  // Enhanced batch query submission with individual field queries
+  submitBatchQuery: async (files, fields, options = {}) => {
     // Get API key
     const apiKey = await keytar.getPassword(SERVICE_NAME, ACCOUNT_NAME)
     if (!apiKey) {
@@ -233,8 +233,8 @@ contextBridge.exposeInMainWorld('api', {
       const buffer = Buffer.from(await file.arrayBuffer())
       const base64Pdf = buffer.toString('base64')
       
-      for (const topic of topics) {
-        const customId = `${file.name}-${topic.name}`.replace(/[^a-zA-Z0-9-_]/g, '_')
+      for (const field of fields) {
+        const customId = `${file.name}-${field.topic}-${field.fieldName}`.replace(/[^a-zA-Z0-9-_]/g, '_')
         const request = {
           custom_id: customId,
           params: {
@@ -254,7 +254,7 @@ contextBridge.exposeInMainWorld('api', {
                   },
                   {
                     type: 'text',
-                    text: getExtractionPrompt(topic.query),
+                    text: getExtractionPrompt(field.query),
                   },
                 ],
                 role: 'user',
@@ -305,7 +305,7 @@ contextBridge.exposeInMainWorld('api', {
       cancel_initiated_at: data.cancel_initiated_at,
       results_url: data.results_url,
       files: files.map(f => f.name),
-      topics: topics.map(t => t.name),
+      topics: [...new Set(fields.map(f => f.topic))],
       results: null,
       error: null,
       cache_stats: {

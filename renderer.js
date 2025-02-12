@@ -37,6 +37,8 @@ const createTopicSection = () => {
 
 // Helper function to convert table data to CSV
 const tableToCSV = (table) => {
+    // Add BOM for proper UTF-8 encoding
+    const BOM = '\uFEFF';
     const rows = table.querySelectorAll('tr');
     const csvRows = [];
     
@@ -44,15 +46,18 @@ const tableToCSV = (table) => {
         const cells = row.querySelectorAll('th, td');
         const csvRow = Array.from(cells)
             .map(cell => {
-                // Escape quotes and wrap content in quotes to handle commas and newlines
-                const content = cell.textContent.replace(/"/g, '""');
+                // Get the text content while preserving whitespace
+                const content = cell.textContent
+                    .replace(/"/g, '""') // Escape quotes for CSV
+                    .replace(/\r\n/g, '\n') // Normalize line endings
+                    .replace(/\r/g, '\n'); // Normalize line endings
                 return `"${content}"`;
             })
             .join(',');
         csvRows.push(csvRow);
     }
     
-    return csvRows.join('\n');
+    return BOM + csvRows.join('\n');
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -410,8 +415,15 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
             const jobElement = document.createElement('div');
             jobElement.className = 'batch-job';
             
-            const statusClass = job.processing_status === 'ended' ? 'success' : 
-                              job.error ? 'error' : 'processing';
+            // Determine job status and class
+            let statusText = job.processing_status.replace('_', ' ');
+            let statusClass = 'in-progress';
+            
+            if (job.processing_status === 'ended') {
+                statusClass = 'ended';
+            } else if (job.cancel_initiated_at) {
+                statusText = 'Canceling...';
+            }
             
             // Calculate time remaining or expiration
             const now = new Date();
@@ -424,9 +436,9 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
                 <div class="job-header">
                     <span class="job-id">Job ID: ${job.id}</span>
                     <div class="job-status-container">
-                        <span class="job-status ${statusClass}">${job.processing_status}</span>
+                        <span class="job-status ${statusClass}">${statusText}</span>
                         ${job.processing_status !== 'ended' && !job.cancel_initiated_at ? 
-                            `<button class="cancel-job" data-job-id="${job.id}">Cancel</button>` : ''}
+                            `<button class="cancel-btn" data-job-id="${job.id}">Cancel</button>` : ''}
                     </div>
                 </div>
                 <div class="job-details">
@@ -448,45 +460,35 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
                             Expired: ${job.request_counts.expired}
                         ` : 'Initializing...'}</div>
                     </div>
-                    ${job.cache_stats ? `
-                    <div class="cache-stats">
-                            <div>Results Summary:</div>
-                            <div>Succeeded: ${job.cache_stats.succeeded}</div>
-                            <div>Errored: ${job.cache_stats.errored}</div>
-                            <div>Canceled: ${job.cache_stats.canceled}</div>
-                            <div>Expired: ${job.cache_stats.expired}</div>
-                            <div>Total: ${job.cache_stats.total}</div>
-                            <div class="cache-performance">
-                                <div>Cache Performance:</div>
-                                <div>Hits: ${job.cache_stats.hits}</div>
-                                <div>Misses: ${job.cache_stats.misses}</div>
-                                <div>Hit Rate: ${job.cache_stats.hit_rate.toFixed(1)}%</div>
-                            </div>
-                        </div>
-                    ` : ''}
                     ${job.costs ? `
-                        <div class="job-costs">
-                            <div class="cost-section">
-                                <h4>Regular Costs:</h4>
-                                <div>Input: $${job.costs.regular.input.toFixed(4)}</div>
-                                <div>Output: $${job.costs.regular.output.toFixed(4)}</div>
-                                <div>Total: $${job.costs.regular.total.toFixed(4)}</div>
+                        <div class="cost-summary">
+                            <div class="total-cost">
+                                Total Cost: <span class="amount">$${job.costs.total.toFixed(4)}</span>
                             </div>
-                            <div class="cost-section">
-                                <h4>Cached Costs:</h4>
-                                <div>Cache Read: $${job.costs.cached.cache_read.toFixed(4)}</div>
-                                <div>Cache Creation: $${job.costs.cached.cache_creation.toFixed(4)}</div>
-                                <div>Total: $${job.costs.cached.total.toFixed(4)}</div>
-                            </div>
-                            <div class="cost-savings">
-                                <div>Total Cost: $${job.costs.total.toFixed(4)}</div>
+                            <div class="cost-details">
+                                <div class="cost-item">
+                                    <span class="label">Regular Input</span>
+                                    <span class="amount">$${job.costs.regular.input.toFixed(4)}</span>
+                                </div>
+                                <div class="cost-item">
+                                    <span class="label">Regular Output</span>
+                                    <span class="amount">$${job.costs.regular.output.toFixed(4)}</span>
+                                </div>
+                                <div class="cost-item">
+                                    <span class="label">Cache Read</span>
+                                    <span class="amount">$${job.costs.cached.cache_read.toFixed(4)}</span>
+                                </div>
+                                <div class="cost-item">
+                                    <span class="label">Cache Creation</span>
+                                    <span class="amount">$${job.costs.cached.cache_creation.toFixed(4)}</span>
+                                </div>
                             </div>
                         </div>
                     ` : ''}
                     ${job.error ? `<div class="job-error">Error: ${job.error}</div>` : ''}
                 </div>
                 ${job.processing_status === 'ended' ? `
-                    <button class="download-results" data-job-id="${job.id}">Download Results</button>
+                    <button class="download-results secondary-btn" data-job-id="${job.id}">Download Results</button>
                 ` : ''}
             `;
             
@@ -597,7 +599,7 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
                 refreshBatchStatusButton.textContent = 'Refresh Status';
             } else {
                 refreshBatchStatusButton.textContent = 'Auto-Refreshing...';
-                autoRefreshInterval = setInterval(refreshStatus, 30000); // Refresh every 30 seconds
+                autoRefreshInterval = setInterval(refreshStatus, 20000); // Refresh every 20 seconds
             }
             await refreshStatus();
         });
@@ -605,7 +607,7 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
 
     // Handle batch job cancellation
     batchJobsContainer.addEventListener('click', async (event) => {
-        if (event.target.classList.contains('cancel-job')) {
+        if (event.target.classList.contains('cancel-btn') && event.target.dataset.jobId) {
             const jobId = event.target.dataset.jobId;
             try {
                 await window.api.cancelBatchJob(jobId);
@@ -649,8 +651,8 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
                                     result.custom_id.toLowerCase().includes(t.toLowerCase().replace(/\s+/g, '_'))
                                 ) || [''];
 
-                                // First concatenate all content
-                                let fullText = contentBlocks.map(block => block.text).join('');
+                                // First concatenate all content with newlines to preserve structure
+                                let fullText = contentBlocks.map(block => block.text).join('\n');
 
                                 // Extract tagged content
                                 const dataMatch = fullText.match(/<data>([\s\S]*?)<\/data>/);
@@ -702,12 +704,16 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
                                 const thinkingProcess = processedThinking;
                                 const citationsText = formattedCitations || '';
 
-                                // Escape quotes and wrap fields in quotes
+                                // Normalize and escape fields with proper character encoding
                                 const escapeField = (field) => {
                                     if (field === null || field === undefined) {
                                         return `""`;
                                     }
-                                    return `"${field.toString().replace(/"/g, '""')}"`;
+                                    const normalizedField = field.toString()
+                                        .replace(/"/g, '""') // Escape quotes for CSV
+                                        .replace(/\r\n/g, '\n') // Normalize line endings
+                                        .replace(/\r/g, '\n'); // Normalize line endings
+                                    return `"${normalizedField}"`;
                                 };
 
                                 return [
@@ -722,8 +728,10 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
                             return `"${result.custom_id}","","","Error: No content","Error: No content"`;
                         }).join('\n');
                         
+                        // Add BOM for proper UTF-8 encoding
+                        const BOM = '\uFEFF';
                         const header = 'PDF Name,Topic,Query,Thinking Process,Final Results,Citations\n';
-                        const blob = new Blob([header + csv], { type: 'text/csv;charset=utf-8;' });
+                        const blob = new Blob([BOM + header + csv], { type: 'text/csv;charset=utf-8-sig;' });
                         const link = document.createElement('a');
                         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
                         link.href = URL.createObjectURL(blob);
@@ -777,9 +785,9 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
             return;
         }
 
-        // Validate and collect data from all topics
+        // Validate and collect data from all topics and fields
         const topics = Array.from(topicsContainer.getElementsByClassName('topic-section'));
-        const formattedTopics = [];
+        const formattedFields = [];
         let hasEmptyRequired = false;
 
         topics.forEach((topic) => {
@@ -794,9 +802,8 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
             topicNameInput.style.borderColor = '#ddd';
 
             const dataFields = Array.from(topic.getElementsByClassName('data-field-row'));
-            const formattedQuery = [];
 
-            dataFields.forEach((row, index) => {
+            dataFields.forEach((row) => {
                 const nameInput = row.querySelector('.field-name');
                 const unitInput = row.querySelector('.field-unit');
                 const descInput = row.querySelector('.field-description');
@@ -806,26 +813,23 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
                     nameInput.style.borderColor = '#dc3545';
                 } else {
                     nameInput.style.borderColor = '#ddd';
-                    let queryLine = `${index + 1}. ${nameInput.value.trim()}`;
+                    let queryText = nameInput.value.trim();
                     
                     if (unitInput.value.trim()) {
-                        queryLine += ` [Expected result format: ${unitInput.value.trim()}]`;
+                        queryText += ` [Expected result format: ${unitInput.value.trim()}]`;
                     }
                     
                     if (descInput.value.trim()) {
-                        queryLine += `: ${descInput.value.trim()}`;
+                        queryText += `: ${descInput.value.trim()}`;
                     }
                     
-                    formattedQuery.push(queryLine);
+                    formattedFields.push({
+                        topic: topicName,
+                        fieldName: nameInput.value.trim(),
+                        query: queryText
+                    });
                 }
             });
-
-            if (!hasEmptyRequired) {
-                formattedTopics.push({
-                    name: topicName,
-                    query: formattedQuery.join('\n')
-                });
-            }
         });
 
         if (hasEmptyRequired) {
@@ -841,7 +845,7 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
 
             if (isBatchMode) {
                 // Calculate total batch size
-                const totalSize = new Blob([JSON.stringify(formattedTopics)]).size * selectedFiles.length;
+                const totalSize = new Blob([JSON.stringify(formattedFields)]).size * selectedFiles.length;
                 const batchSizeWarning = document.querySelector('.batch-size-warning');
                 if (totalSize > window.api.constants.MAX_BATCH_SIZE * 0.8) { // Show warning at 80% of limit
                     batchSizeWarning.style.display = 'block';
@@ -852,7 +856,7 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
                 const options = {
                     enableCaching: document.getElementById('enable-caching').checked
                 };
-                const batchJob = await window.api.submitBatchQuery(selectedFiles, formattedTopics, options);
+                const batchJob = await window.api.submitBatchQuery(selectedFiles, formattedFields, options);
                 updateBatchJobsView();
                 loadingIndicator.textContent = `Batch job ${batchJob.id} submitted successfully. Results will be available within 24 hours.`;
                 
@@ -885,16 +889,16 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
                 cache_creation: 0
             };
 
-            // Process files sequentially
+            // Process files and fields sequentially
             for (let i = 0; i < selectedFiles.length; i++) {
                 const file = selectedFiles[i];
                 
-                // Process each topic for the current file
-                for (let j = 0; j < formattedTopics.length; j++) {
-                    const topic = formattedTopics[j];
+                // Process each field for the current file
+                for (let j = 0; j < formattedFields.length; j++) {
+                    const field = formattedFields[j];
                     try {
                         // Show processing status
-                        loadingIndicator.textContent = `Processing ${i + 1}/${selectedFiles.length}: ${file.name}\nTopic ${j + 1}/${formattedTopics.length}: ${topic.name}`;
+                        loadingIndicator.textContent = `Processing ${i + 1}/${selectedFiles.length}: ${file.name}\nField ${j + 1}/${formattedFields.length}: ${field.fieldName} (${field.topic})`;
 
                         // Read file as ArrayBuffer
                         const fileBuffer = await new Promise((resolve, reject) => {
@@ -909,10 +913,10 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
                             await new Promise(resolve => setTimeout(resolve, 1000));
                         }
 
-                        const result = await window.api.queryPDF(fileBuffer, topic.query, (retryInfo) => {
+                        const result = await window.api.queryPDF(fileBuffer, field.query, (retryInfo) => {
                             const { attempt, maxRetries, delay, error } = retryInfo;
                             const waitSeconds = Math.ceil(delay / 1000);
-                            loadingIndicator.textContent = `Processing ${i + 1}/${selectedFiles.length}: ${file.name}\nTopic ${j + 1}/${formattedTopics.length}: ${topic.name}\nRetry ${attempt}/${maxRetries}: Waiting ${waitSeconds}s before retry...\nReason: ${error.message}`;
+                            loadingIndicator.textContent = `Processing ${i + 1}/${selectedFiles.length}: ${file.name}\nField ${j + 1}/${formattedFields.length}: ${field.fieldName} (${field.topic})\nRetry ${attempt}/${maxRetries}: Waiting ${waitSeconds}s before retry...\nReason: ${error.message}`;
                         });
                     
                         // Update usage totals
@@ -948,8 +952,8 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
                             totalCosts.cache_creation
                         ).toFixed(4);
 
-                        // First concatenate all content
-                        let fullText = result.content.map(block => block.text).join('');
+                        // First concatenate all content with newlines to preserve structure
+                        let fullText = result.content.map(block => block.text).join('\n');
 
                         // Extract tagged content
                         const dataMatch = fullText.match(/<data>([\s\S]*?)<\/data>/);
@@ -961,8 +965,8 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
                             const row = document.createElement('tr');
                             row.innerHTML = `
                                 <td>${file.name}</td>
-                                <td>${topic.name}</td>
-                                <td>${topic.query}</td>
+                            <td>${field.topic}</td>
+                            <td>${field.query}</td>
                                 <td>No structured data found</td>
                                 <td>No structured data found</td>
                                 <td>No citations available</td>
@@ -1015,7 +1019,7 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
                         const row = document.createElement('tr');
                         row.innerHTML = `
                             <td>${file.name}</td>
-                            <td>${topic.name}</td>
+                            <td>${field.topic}</td>
                             <td>${queryContent}</td>
                             <td>${processedThinking}</td>
                             <td>${finalResult}</td>
@@ -1027,8 +1031,8 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
                         const row = document.createElement('tr');
                         row.innerHTML = `
                             <td>${file.name}</td>
-                            <td>${topic.name}</td>
-                            <td>${topic.query}</td>
+                            <td>${field.topic}</td>
+                            <td>${field.query}</td>
                             <td class="error" colspan="3">Error: ${error.message}</td>
                         `;
                         tbody.appendChild(row);
@@ -1051,7 +1055,7 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
         const csv = tableToCSV(table);
         
         // Create a Blob containing the CSV data
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8-sig;' });
         
         // Create a download link and trigger it
         const link = document.createElement('a');
