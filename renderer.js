@@ -855,6 +855,16 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
                     // Clear completed jobs before starting new one
                     window.api.clearBatchJobs();
                 }
+            } else {
+                // Check if there are existing results for normal query mode
+                const responseTable = document.getElementById('response-table');
+                const tbody = responseTable.querySelector('tbody');
+                if (tbody.children.length > 0) {
+                    const shouldProceed = confirm('Starting a new query will clear the current results. Do you want to proceed?');
+                    if (!shouldProceed) {
+                        return;
+                    }
+                }
             }
 
             errorMessage.style.display = 'none';
