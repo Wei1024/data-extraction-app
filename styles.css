@@ -839,3 +839,130 @@ input[type="checkbox"]:focus {
 .restriction-text {
     flex: 1;
 }
+
+.project-input {
+    margin-bottom: 15px;
+    width: 100%;
+}
+
+.project-input label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: var(--color-text);
+}
+
+.project-input input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-sm);
+    font-size: 14px;
+    background-color: var(--color-white);
+    color: var(--color-text);
+}
+
+.project-input input:focus {
+    outline: none;
+    border-color: var(--color-teal);
+    box-shadow: 0 0 0 2px rgba(0, 128, 128, 0.1);
+}
+
+.project-input input:disabled {
+    background-color: var(--color-bg);
+    cursor: not-allowed;
+}
+
+/* Create Project button specific styling */
+.project-management .primary-btn {
+    background: var(--gradient-teal);
+    color: var(--color-white);
+    opacity: 1;
+    cursor: pointer;
+}
+
+.project-management .primary-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.selected-file {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px;
+    margin: 4px 0;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+}
+
+.selected-file.error {
+    background-color: #fff3f3;
+    border-color: #ffcdd2;
+}
+
+.file-name {
+    flex: 1;
+    margin-right: 10px;
+    word-break: break-all;
+}
+
+.file-status {
+    font-size: 0.9em;
+    white-space: nowrap;
+}
+
+.selected-file.error .file-status {
+    color: #dc3545;
+}
+
+.project-management {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+    align-items: start;
+}
+
+.current-project {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background-color: var(--color-bg);
+    border-radius: var(--border-radius-sm);
+    border: 1px solid var(--color-border);
+}
+
+.project-label {
+    font-weight: 500;
+    color: var(--color-text-light);
+}
+
+.project-name {
+    font-weight: 600;
+    color: var(--color-teal);
+}
+
+.file-status {
+    color: var(--color-success);
+    font-weight: 500;
+}
+
+.finish-project {
+    margin-left: auto;
+}
+
+.start-new-project {
+    width: 100%;
+    margin-bottom: var(--spacing-sm);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+}
+
+.start-new-project:hover {
+    background: var(--color-border);
+    color: var(--color-text);
+}

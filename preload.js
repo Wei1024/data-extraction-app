@@ -542,5 +542,13 @@ contextBridge.exposeInMainWorld('api', {
     }
 
     return job
+  },
+
+  storePdf: async (projectName, fileBuffer, fileName) => {
+    return await ipcRenderer.invoke('store-pdf', {
+      projectName,
+      fileBuffer,
+      fileName
+    })
   }
 })

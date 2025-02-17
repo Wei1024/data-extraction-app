@@ -62,46 +62,154 @@ const tableToCSV = (table) => {
 
 document.addEventListener('DOMContentLoaded', async () => {
     const fileInput = document.getElementById('pdf-file');
+    const projectNameInput = document.getElementById('project-name');
     const selectedFilesDiv = document.getElementById('selected-files');
     const topicsContainer = document.getElementById('topics-container');
     const addTopicButton = document.getElementById('add-topic');
     const csvImportInput = document.getElementById('csv-import');
     const downloadTemplateButton = document.getElementById('download-template');
+    const apiKeyInput = document.getElementById('api-key');
 
-    // Handle template download
-    downloadTemplateButton.addEventListener('click', () => {
-        const templateContent = `topic_name,field_name,result_format,description
-Study Characteristics,Study Design,text,Type of study (e.g. RCT)
-Study Characteristics,Sample Size,number,Total number of participants in the study
-Study Characteristics,Population,text,Description of study population and inclusion criteria
-Study Characteristics,Follow-up Duration,text,Length of study follow-up period
-Clinical Outcomes,Primary Endpoint,text,Primary outcome measure of the study
-Clinical Outcomes,Effect Size,number with CI,Treatment effect with confidence interval
-Clinical Outcomes,P-value,number,Statistical significance of primary outcome
-Clinical Outcomes,Adverse Events,bullet points,List of reported adverse events
-Economic Analysis,Cost Measure,currency,Type and amount of costs analyzed
-Economic Analysis,ICER,currency/QALY,Incremental cost-effectiveness ratio
-Economic Analysis,Utility Values,number,Health state utility values used
-Economic Analysis,Time Horizon,text,Time horizon of economic analysis
-Quality Assessment,Risk of Bias,text,Assessment of study bias and limitations
-Quality Assessment,GRADE Score,text,Quality of evidence assessment
-Quality Assessment,Funding Source,text,Study sponsor and funding details`;
+    // Add project management elements
+    let currentProject = null;
+    let hasUploadedFiles = false;
+    
+    // Create Start New Project button above project input
+    const startNewProjectBtn = document.createElement('button');
+    startNewProjectBtn.className = 'secondary-btn start-new-project';
+    startNewProjectBtn.textContent = 'Start New Project';
+    startNewProjectBtn.style.display = 'none'; // Initially hidden
+    projectNameInput.parentElement.insertBefore(startNewProjectBtn, projectNameInput);
 
-        const blob = new Blob([templateContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = 'topic-template.csv';
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    // Create project management container
+    const projectManagementDiv = document.createElement('div');
+    projectManagementDiv.className = 'project-management';
+    projectNameInput.parentElement.appendChild(projectManagementDiv);
+
+    // Create Project button
+    const createProjectBtn = document.createElement('button');
+    createProjectBtn.className = 'primary-btn';
+    createProjectBtn.textContent = 'Create Project';
+    projectManagementDiv.appendChild(createProjectBtn);
+
+    // Project status display
+    const projectStatusDiv = document.createElement('div');
+    projectStatusDiv.className = 'project-status';
+    projectManagementDiv.appendChild(projectStatusDiv);
+
+    // Initially disable file input
+    fileInput.disabled = true;
+    fileInput.parentElement.style.opacity = '0.6';
+
+    // Ensure project input and create button are enabled and visible
+    projectNameInput.disabled = false;
+    projectNameInput.style.opacity = '1';
+    createProjectBtn.style.opacity = '1';
+    createProjectBtn.style.display = 'block';
+
+    // Handle Start New Project
+    startNewProjectBtn.addEventListener('click', () => {
+        const confirmStart = confirm('Starting a new project will clear your current project data. Do you want to proceed?');
+        if (!confirmStart) {
+            return;
+        }
+        
+        currentProject = null;
+        hasUploadedFiles = false;
+        projectNameInput.value = '';
+        projectNameInput.disabled = false;
+        createProjectBtn.style.display = 'block';
+        projectStatusDiv.innerHTML = '';
+        selectedFiles = [];
+        selectedFilesDiv.innerHTML = '';
+        fileInput.value = '';
+        fileInput.disabled = true;
+        fileInput.parentElement.style.opacity = '0.6';
+        startNewProjectBtn.style.display = 'none';
+    });
+
+    createProjectBtn.addEventListener('click', () => {
+        const projectName = projectNameInput.value.trim();
+        if (!projectName) {
+            errorMessage.textContent = 'Please enter a project name';
+            errorMessage.style.display = 'block';
+            return;
+        }
+
+        currentProject = projectName;
+        projectNameInput.disabled = true;
+        createProjectBtn.style.display = 'none';
+        
+        // Show current project status
+        projectStatusDiv.innerHTML = `
+            <div class="current-project">
+                <span class="project-label">Current Project:</span>
+                <span class="project-name">${currentProject}</span>
+            </div>
+        `;
+
+        // Enable file input
+        fileInput.disabled = false;
+        fileInput.parentElement.style.opacity = '1';
+        errorMessage.style.display = 'none';
+    });
+
+    // Modify file input handler to use current project
+    fileInput.addEventListener('change', async (event) => {
+        if (!currentProject) {
+            errorMessage.textContent = 'Please create a project first';
+            errorMessage.style.display = 'block';
+            fileInput.value = '';
+            return;
+        }
+
+        selectedFiles = Array.from(event.target.files);
+        
+        // Display selected file names
+        selectedFilesDiv.innerHTML = '';
+        for (const file of selectedFiles) {
+            try {
+                // Read file as array buffer
+                const buffer = await file.arrayBuffer();
+                
+                // Store the file in project directory
+                const result = await window.api.storePdf(currentProject, buffer, file.name);
+                
+                // Create file entry in UI with simpler status
+                const fileEntry = document.createElement('div');
+                fileEntry.className = 'selected-file';
+                fileEntry.innerHTML = `
+                    <span class="file-name">${file.name}</span>
+                    <span class="file-status">✓</span>
+                `;
+                selectedFilesDiv.appendChild(fileEntry);
+            } catch (error) {
+                console.error('Error storing file:', error);
+                const fileEntry = document.createElement('div');
+                fileEntry.className = 'selected-file error';
+                fileEntry.innerHTML = `
+                    <span class="file-name">${file.name}</span>
+                    <span class="file-status">Error: ${error.message}</span>
+                `;
+                selectedFilesDiv.appendChild(fileEntry);
+            }
+        }
+
+        // Clear the file input to allow selecting more files for the same project
+        fileInput.value = '';
+    });
+
+    // Add validation for project name
+    projectNameInput.addEventListener('input', () => {
+        if (projectNameInput.value.trim()) {
+            errorMessage.style.display = 'none';
+        }
     });
 
     const submitButton = document.getElementById('submit-query');
     const responseText = document.getElementById('response-text');
     const loadingIndicator = document.getElementById('loading');
     const errorMessage = document.getElementById('error-message');
-    const apiKeyInput = document.getElementById('api-key');
     const downloadButton = document.getElementById('download-csv');
     const saveApiKeyButton = document.getElementById('save-api-key');
     const apiKeyStatus = document.getElementById('api-key-status');
@@ -380,31 +488,6 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
         }
     });
 
-    // Handle file selection
-    fileInput.addEventListener('change', (event) => {
-        const files = Array.from(event.target.files);
-        selectedFiles = [];
-        selectedFilesDiv.innerHTML = '';
-        
-        files.forEach(file => {
-            if (!file.type.includes('pdf')) {
-                errorMessage.textContent = `File ${file.name} is not a PDF`;
-                errorMessage.style.display = 'block';
-                return;
-            }
-            selectedFiles.push(file);
-            const fileDiv = document.createElement('div');
-            fileDiv.textContent = file.name;
-            selectedFilesDiv.appendChild(fileDiv);
-        });
-
-        if (selectedFiles.length > 0) {
-            errorMessage.style.display = 'none';
-        } else {
-            selectedFilesDiv.innerHTML = '';
-        }
-    });
-
     // Enhanced batch jobs view
     const updateBatchJobsView = () => {
         const jobs = window.api.listBatchJobs({ includeExpired: false });
@@ -493,6 +576,11 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
             `;
             
             batchJobsList.appendChild(jobElement);
+
+            // If job is complete and has results, show Start New Project button
+            if (job.processing_status === 'ended' && job.results && job.results.length > 0) {
+                startNewProjectBtn.style.display = 'block';
+            }
         });
     };
 
@@ -781,7 +869,7 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
         }
     });
 
-    // Handle form submission
+    // Handle form submission and show Start New Project button after results
     submitButton.addEventListener('click', async () => {
         const isBatchMode = batchModeToggle?.checked;
         if (selectedFiles.length === 0) {
@@ -794,6 +882,7 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
         const topics = Array.from(topicsContainer.getElementsByClassName('topic-section'));
         const formattedFields = [];
         let hasEmptyRequired = false;
+        let successfulResults = 0; // Add counter for successful results
 
         topics.forEach((topic) => {
             const topicNameInput = topic.querySelector('.topic-name');
@@ -890,181 +979,187 @@ Quality Assessment,Funding Source,text,Study sponsor and funding details`;
                 
                 // Start auto-refresh
                 refreshBatchStatusButton.click();
-                return;
-            }
-            
-            // Clear previous results
-            const responseTable = document.getElementById('response-table');
-            const tbody = responseTable.querySelector('tbody');
-            tbody.innerHTML = '';
-            responseTable.style.display = 'table';
-            responseText.style.display = 'none';
-            downloadButton.style.display = 'block';
+            } else {
+                // Clear previous results
+                const responseTable = document.getElementById('response-table');
+                const tbody = responseTable.querySelector('tbody');
+                tbody.innerHTML = '';
+                responseTable.style.display = 'table';
+                responseText.style.display = 'none';
+                downloadButton.style.display = 'block';
 
-            // Reset cost summary
-            const costSummary = document.querySelector('.cost-summary');
-            costSummary.style.display = 'block';
-            let totalUsage = {
-                input_tokens: 0,
-                output_tokens: 0,
-                cache_read_input_tokens: 0,
-                cache_creation_input_tokens: 0
-            };
-            let totalCosts = {
-                input: 0,
-                output: 0,
-                cache_read: 0,
-                cache_creation: 0
-            };
+                // Reset cost summary
+                const costSummary = document.querySelector('.cost-summary');
+                costSummary.style.display = 'block';
+                let totalUsage = {
+                    input_tokens: 0,
+                    output_tokens: 0,
+                    cache_read_input_tokens: 0,
+                    cache_creation_input_tokens: 0
+                };
+                let totalCosts = {
+                    input: 0,
+                    output: 0,
+                    cache_read: 0,
+                    cache_creation: 0
+                };
 
-            // Process files and fields sequentially
-            for (let i = 0; i < selectedFiles.length; i++) {
-                const file = selectedFiles[i];
-                
-                // Process each field for the current file
-                for (let j = 0; j < formattedFields.length; j++) {
-                    const field = formattedFields[j];
-                    try {
-                        // Show processing status
-                        loadingIndicator.textContent = `Processing ${i + 1}/${selectedFiles.length}: ${file.name}\nField ${j + 1}/${formattedFields.length}: ${field.fieldName} (${field.topic})`;
-
-                        // Read file as ArrayBuffer
-                        const fileBuffer = await new Promise((resolve, reject) => {
-                            const reader = new FileReader();
-                            reader.onload = () => resolve(reader.result);
-                            reader.onerror = () => reject(reader.error);
-                            reader.readAsArrayBuffer(file);
-                        });
-
-                        // Add delay between API calls to prevent rate limiting
-                        if (i > 0 || j > 0) {
-                            await new Promise(resolve => setTimeout(resolve, 1000));
-                        }
-
-                        const result = await window.api.queryPDF(fileBuffer, field.query, (retryInfo) => {
-                            const { attempt, maxRetries, delay, error } = retryInfo;
-                            const waitSeconds = Math.ceil(delay / 1000);
-                            loadingIndicator.textContent = `Processing ${i + 1}/${selectedFiles.length}: ${file.name}\nField ${j + 1}/${formattedFields.length}: ${field.fieldName} (${field.topic})\nRetry ${attempt}/${maxRetries}: Waiting ${waitSeconds}s before retry...\nReason: ${error.message}`;
-                        });
+                // Process files and fields sequentially
+                for (let i = 0; i < selectedFiles.length; i++) {
+                    const file = selectedFiles[i];
                     
-                        // Update usage totals
-                        if (result.usage) {
-                            totalUsage.input_tokens += result.usage.input_tokens || 0;
-                            totalUsage.output_tokens += result.usage.output_tokens || 0;
-                            totalUsage.cache_read_input_tokens += result.usage.cache_read_input_tokens || 0;
-                            totalUsage.cache_creation_input_tokens += result.usage.cache_creation_input_tokens || 0;
-                        }
+                    // Process each field for the current file
+                    for (let j = 0; j < formattedFields.length; j++) {
+                        const field = formattedFields[j];
+                        try {
+                            // Show processing status
+                            loadingIndicator.textContent = `Processing ${i + 1}/${selectedFiles.length}: ${file.name}\nField ${j + 1}/${formattedFields.length}: ${field.fieldName} (${field.topic})`;
 
-                        // Update cost totals
-                        if (result.costs) {
-                            totalCosts.input += result.costs.input || 0;
-                            totalCosts.output += result.costs.output || 0;
-                            totalCosts.cache_read += result.costs.cache_read || 0;
-                            totalCosts.cache_creation += result.costs.cache_creation || 0;
-                        }
+                            // Read file as ArrayBuffer
+                            const fileBuffer = await new Promise((resolve, reject) => {
+                                const reader = new FileReader();
+                                reader.onload = () => resolve(reader.result);
+                                reader.onerror = () => reject(reader.error);
+                                reader.readAsArrayBuffer(file);
+                            });
 
-                        // Update cost summary display
-                        document.getElementById('input-tokens').textContent = totalUsage.input_tokens.toLocaleString();
-                        document.getElementById('output-tokens').textContent = totalUsage.output_tokens.toLocaleString();
-                        document.getElementById('cache-read-tokens').textContent = totalUsage.cache_read_input_tokens.toLocaleString();
-                        document.getElementById('cache-creation-tokens').textContent = totalUsage.cache_creation_input_tokens.toLocaleString();
+                            // Add delay between API calls to prevent rate limiting
+                            if (i > 0 || j > 0) {
+                                await new Promise(resolve => setTimeout(resolve, 1000));
+                            }
 
-                        document.getElementById('input-cost').textContent = totalCosts.input.toFixed(4);
-                        document.getElementById('output-cost').textContent = totalCosts.output.toFixed(4);
-                        document.getElementById('cache-read-cost').textContent = totalCosts.cache_read.toFixed(4);
-                        document.getElementById('cache-creation-cost').textContent = totalCosts.cache_creation.toFixed(4);
-                        document.getElementById('total-cost').textContent = (
-                            totalCosts.input + 
-                            totalCosts.output + 
-                            totalCosts.cache_read + 
-                            totalCosts.cache_creation
-                        ).toFixed(4);
+                            const result = await window.api.queryPDF(fileBuffer, field.query, (retryInfo) => {
+                                const { attempt, maxRetries, delay, error } = retryInfo;
+                                const waitSeconds = Math.ceil(delay / 1000);
+                                loadingIndicator.textContent = `Processing ${i + 1}/${selectedFiles.length}: ${file.name}\nField ${j + 1}/${formattedFields.length}: ${field.fieldName} (${field.topic})\nRetry ${attempt}/${maxRetries}: Waiting ${waitSeconds}s before retry...\nReason: ${error.message}`;
+                            });
+                        
+                            // Update usage totals
+                            if (result.usage) {
+                                totalUsage.input_tokens += result.usage.input_tokens || 0;
+                                totalUsage.output_tokens += result.usage.output_tokens || 0;
+                                totalUsage.cache_read_input_tokens += result.usage.cache_read_input_tokens || 0;
+                                totalUsage.cache_creation_input_tokens += result.usage.cache_creation_input_tokens || 0;
+                            }
 
-                        // First concatenate all content with newlines to preserve structure
-                        let fullText = result.content.map(block => block.text).join('\n');
+                            // Update cost totals
+                            if (result.costs) {
+                                totalCosts.input += result.costs.input || 0;
+                                totalCosts.output += result.costs.output || 0;
+                                totalCosts.cache_read += result.costs.cache_read || 0;
+                                totalCosts.cache_creation += result.costs.cache_creation || 0;
+                            }
 
-                        // Extract tagged content
-                        const dataMatch = fullText.match(/<data>([\s\S]*?)<\/data>/);
-                        const thinkingMatch = fullText.match(/<thinking>([\s\S]*?)<\/thinking>/);
-                        const resultMatch = fullText.match(/<result>([\s\S]*?)<\/result>/);
+                            // Update cost summary display
+                            document.getElementById('input-tokens').textContent = totalUsage.input_tokens.toLocaleString();
+                            document.getElementById('output-tokens').textContent = totalUsage.output_tokens.toLocaleString();
+                            document.getElementById('cache-read-tokens').textContent = totalUsage.cache_read_input_tokens.toLocaleString();
+                            document.getElementById('cache-creation-tokens').textContent = totalUsage.cache_creation_input_tokens.toLocaleString();
 
-                        if (!dataMatch || !thinkingMatch || !resultMatch) {
-                            // Handle missing tags
+                            document.getElementById('input-cost').textContent = totalCosts.input.toFixed(4);
+                            document.getElementById('output-cost').textContent = totalCosts.output.toFixed(4);
+                            document.getElementById('cache-read-cost').textContent = totalCosts.cache_read.toFixed(4);
+                            document.getElementById('cache-creation-cost').textContent = totalCosts.cache_creation.toFixed(4);
+                            document.getElementById('total-cost').textContent = (
+                                totalCosts.input + 
+                                totalCosts.output + 
+                                totalCosts.cache_read + 
+                                totalCosts.cache_creation
+                            ).toFixed(4);
+
+                            // First concatenate all content with newlines to preserve structure
+                            let fullText = result.content.map(block => block.text).join('\n');
+
+                            // Extract tagged content
+                            const dataMatch = fullText.match(/<data>([\s\S]*?)<\/data>/);
+                            const thinkingMatch = fullText.match(/<thinking>([\s\S]*?)<\/thinking>/);
+                            const resultMatch = fullText.match(/<result>([\s\S]*?)<\/result>/);
+
+                            if (!dataMatch || !thinkingMatch || !resultMatch) {
+                                // Handle missing tags
+                                const row = document.createElement('tr');
+                                row.innerHTML = `
+                                    <td>${file.name}</td>
+                                <td>${field.topic}</td>
+                                <td>${field.query}</td>
+                                    <td>No structured data found</td>
+                                    <td>No structured data found</td>
+                                    <td>No citations available</td>
+                                `;
+                                tbody.appendChild(row);
+                                continue;
+                            }
+
+                            // Extract content
+                            const queryContent = dataMatch[1].trim();
+                            let processedThinking = thinkingMatch[1].trim();
+                            const finalResult = resultMatch[1].trim();
+
+                            // Build citations map for each text block
+                            const citationsMap = new Map();
+                            result.content.forEach(block => {
+                                if (block.type === 'text' && block.citations) {
+                                    citationsMap.set(block.text.trim(), block.citations[0]);
+                                }
+                            });
+
+                            // Process citations
+                            let citationCounter = 1;
+                            const citationsList = [];
+
+                            // Find cited text in thinking content and add citations
+                            for (const [text, citation] of citationsMap) {
+                                if (processedThinking.includes(text)) {
+                                    citationsList.push({
+                                        number: citationCounter,
+                                        text: citation.cited_text,
+                                        pages: `${citation.start_page_number}-${citation.end_page_number}`
+                                    });
+
+                                    // Add citation reference after the text
+                                    processedThinking = processedThinking.replace(
+                                        text,
+                                        `${text}[${citationCounter}]`
+                                    );
+                                    citationCounter++;
+                                }
+                            }
+
+                            // Format citations as a numbered list with extra line breaks between references
+                            const formattedCitations = citationsList.map(citation => 
+                                `${citation.number}. Pages ${citation.pages}: ${citation.text}`
+                            ).join('\n\n');
+
+                            // Create table row with processed data
                             const row = document.createElement('tr');
                             row.innerHTML = `
                                 <td>${file.name}</td>
-                            <td>${field.topic}</td>
-                            <td>${field.query}</td>
-                                <td>No structured data found</td>
-                                <td>No structured data found</td>
-                                <td>No citations available</td>
+                                <td>${field.topic}</td>
+                                <td>${queryContent}</td>
+                                <td>${processedThinking}</td>
+                                <td>${finalResult}</td>
+                                <td>${formattedCitations || 'No citations available'}</td>
                             `;
                             tbody.appendChild(row);
-                            continue;
+                            successfulResults++; // Increment counter for successful results
+                        } catch (error) {
+                            // Add error result to table
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${file.name}</td>
+                                <td>${field.topic}</td>
+                                <td>${field.query}</td>
+                                <td class="error" colspan="3">Error: ${error.message}</td>
+                            `;
+                            tbody.appendChild(row);
                         }
-
-                        // Extract content
-                        const queryContent = dataMatch[1].trim();
-                        let processedThinking = thinkingMatch[1].trim();
-                        const finalResult = resultMatch[1].trim();
-
-                        // Build citations map for each text block
-                        const citationsMap = new Map();
-                        result.content.forEach(block => {
-                            if (block.type === 'text' && block.citations) {
-                                citationsMap.set(block.text.trim(), block.citations[0]);
-                            }
-                        });
-
-                        // Process citations
-                        let citationCounter = 1;
-                        const citationsList = [];
-
-                        // Find cited text in thinking content and add citations
-                        for (const [text, citation] of citationsMap) {
-                            if (processedThinking.includes(text)) {
-                                citationsList.push({
-                                    number: citationCounter,
-                                    text: citation.cited_text,
-                                    pages: `${citation.start_page_number}-${citation.end_page_number}`
-                                });
-
-                                // Add citation reference after the text
-                                processedThinking = processedThinking.replace(
-                                    text,
-                                    `${text}[${citationCounter}]`
-                                );
-                                citationCounter++;
-                            }
-                        }
-
-                        // Format citations as a numbered list with extra line breaks between references
-                        const formattedCitations = citationsList.map(citation => 
-                            `${citation.number}. Pages ${citation.pages}: ${citation.text}`
-                        ).join('\n\n');
-
-                        // Create table row with processed data
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${file.name}</td>
-                            <td>${field.topic}</td>
-                            <td>${queryContent}</td>
-                            <td>${processedThinking}</td>
-                            <td>${finalResult}</td>
-                            <td>${formattedCitations || 'No citations available'}</td>
-                        `;
-                        tbody.appendChild(row);
-                    } catch (error) {
-                        // Add error result to table
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${file.name}</td>
-                            <td>${field.topic}</td>
-                            <td>${field.query}</td>
-                            <td class="error" colspan="3">Error: ${error.message}</td>
-                        `;
-                        tbody.appendChild(row);
                     }
+                }
+
+                // After all processing is complete and results are shown
+                if (successfulResults > 0) {
+                    // Show Start New Project button after results are received
+                    startNewProjectBtn.style.display = 'block';
                 }
             }
         } catch (error) {
