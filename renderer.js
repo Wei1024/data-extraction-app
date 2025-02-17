@@ -1,4 +1,5 @@
 let selectedFiles = [];
+let currentProject = null;
 
 // Helper function to create a new data field row
 const createDataFieldRow = () => {
@@ -60,7 +61,127 @@ const tableToCSV = (table) => {
     return BOM + csvRows.join('\n');
 };
 
+// Add session management functions
+const saveSessionData = () => {
+    const sessionData = {
+        currentProject: currentProject,
+        projectName: document.getElementById('project-name')?.value,
+        apiKey: document.getElementById('api-key')?.value === '********' ? null : document.getElementById('api-key')?.value,
+        batchMode: document.getElementById('batch-mode-toggle')?.checked,
+        enableCaching: document.getElementById('enable-caching')?.checked,
+        topics: Array.from(document.querySelectorAll('.topic-section')).map(topic => ({
+            name: topic.querySelector('.topic-name')?.value,
+            fields: Array.from(topic.querySelectorAll('.data-field-row')).map(field => ({
+                name: field.querySelector('.field-name')?.value,
+                unit: field.querySelector('.field-unit')?.value,
+                description: field.querySelector('.field-description')?.value
+            }))
+        }))
+    };
+    localStorage.setItem('pdfExtractorSession', JSON.stringify(sessionData));
+};
+
+const loadSessionData = () => {
+    const sessionData = localStorage.getItem('pdfExtractorSession');
+    if (!sessionData) return;
+
+    const data = JSON.parse(sessionData);
+    
+    // Restore project data
+    if (data.currentProject) {
+        currentProject = data.currentProject;
+        const projectNameInput = document.getElementById('project-name');
+        if (projectNameInput) {
+            projectNameInput.value = data.projectName || '';
+            projectNameInput.disabled = true;
+            
+            // Update project status
+            const projectStatusDiv = document.querySelector('.project-status');
+            if (projectStatusDiv) {
+                projectStatusDiv.innerHTML = `
+                    <div class="current-project">
+                        <span class="project-label">Current Project:</span>
+                        <span class="project-name">${currentProject}</span>
+                    </div>
+                `;
+            }
+            
+            // Show file input
+            const fileInput = document.getElementById('pdf-file');
+            if (fileInput) {
+                fileInput.disabled = false;
+                fileInput.parentElement.style.opacity = '1';
+            }
+            
+            // Hide create button
+            const createProjectBtn = document.querySelector('.primary-btn');
+            if (createProjectBtn) {
+                createProjectBtn.style.display = 'none';
+            }
+        }
+    }
+
+    // Restore API key if it exists
+    const apiKeyInput = document.getElementById('api-key');
+    if (apiKeyInput && data.apiKey) {
+        apiKeyInput.value = data.apiKey;
+    }
+
+    // Restore batch mode settings
+    const batchModeToggle = document.getElementById('batch-mode-toggle');
+    const enableCaching = document.getElementById('enable-caching');
+    if (batchModeToggle) {
+        batchModeToggle.checked = data.batchMode || false;
+        batchModeToggle.dispatchEvent(new Event('change'));
+    }
+    if (enableCaching) {
+        enableCaching.checked = data.enableCaching !== undefined ? data.enableCaching : true;
+    }
+
+    // Restore topics and fields
+    if (data.topics && data.topics.length > 0) {
+        const topicsContainer = document.getElementById('topics-container');
+        if (topicsContainer) {
+            topicsContainer.innerHTML = ''; // Clear default topic
+            
+            data.topics.forEach((topic, index) => {
+                const topicSection = createTopicSection();
+                topicSection.querySelector('.topic-name').value = topic.name || '';
+                
+                const dataFieldsContainer = topicSection.querySelector('.data-fields-container');
+                dataFieldsContainer.innerHTML = ''; // Clear default field
+                
+                topic.fields.forEach(field => {
+                    const fieldRow = createDataFieldRow();
+                    fieldRow.querySelector('.field-name').value = field.name || '';
+                    fieldRow.querySelector('.field-unit').value = field.unit || '';
+                    fieldRow.querySelector('.field-description').value = field.description || '';
+                    
+                    // Show/hide remove button
+                    const removeButton = fieldRow.querySelector('.remove-field');
+                    removeButton.style.display = topic.fields.length > 1 ? 'block' : 'none';
+                    
+                    dataFieldsContainer.appendChild(fieldRow);
+                });
+                
+                // Update add field button state
+                const addFieldButton = topicSection.querySelector('.add-field-btn');
+                addFieldButton.disabled = topic.fields.length >= 5;
+                
+                // Show/hide remove topic button
+                const removeTopicButton = topicSection.querySelector('.remove-topic');
+                removeTopicButton.style.display = data.topics.length > 1 ? 'block' : 'none';
+                
+                topicsContainer.appendChild(topicSection);
+            });
+        }
+    }
+};
+
 document.addEventListener('DOMContentLoaded', async () => {
+    // Load session data at startup
+    loadSessionData();
+    
     const fileInput = document.getElementById('pdf-file');
     const projectNameInput = document.getElementById('project-name');
     const selectedFilesDiv = document.getElementById('selected-files');
@@ -69,9 +190,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     const csvImportInput = document.getElementById('csv-import');
     const downloadTemplateButton = document.getElementById('download-template');
     const apiKeyInput = document.getElementById('api-key');
+    const downloadButton = document.getElementById('download-csv');
+    const reviewPdfButton = document.getElementById('review-pdf');
+    const saveApiKeyButton = document.getElementById('save-api-key');
+    const apiKeyStatus = document.getElementById('api-key-status');
+    const batchModeToggle = document.getElementById('batch-mode-toggle');
+    const batchJobsContainer = document.getElementById('batch-jobs-container');
+    const refreshBatchStatusButton = document.getElementById('refresh-batch-status');
 
     // Add project management elements
-    let currentProject = null;
     let hasUploadedFiles = false;
     
     // Create Start New Project button above project input
@@ -210,12 +337,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const responseText = document.getElementById('response-text');
     const loadingIndicator = document.getElementById('loading');
     const errorMessage = document.getElementById('error-message');
-    const downloadButton = document.getElementById('download-csv');
-    const saveApiKeyButton = document.getElementById('save-api-key');
-    const apiKeyStatus = document.getElementById('api-key-status');
-    const batchModeToggle = document.getElementById('batch-mode-toggle');
-    const batchJobsContainer = document.getElementById('batch-jobs-container');
-    const refreshBatchStatusButton = document.getElementById('refresh-batch-status');
 
     // Check for existing API key
     try {
@@ -869,7 +990,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // Handle form submission and show Start New Project button after results
+    // Show both download and review buttons when results are available
+    const showResultButtons = () => {
+        downloadButton.style.display = 'inline-block';
+        reviewPdfButton.style.display = 'inline-block';
+    };
+
+    // Handle PDF review button click
+    reviewPdfButton.addEventListener('click', () => {
+        window.location.href = 'pdf-review.html';
+    });
+
+    // Update existing code to show both buttons
     submitButton.addEventListener('click', async () => {
         const isBatchMode = batchModeToggle?.checked;
         if (selectedFiles.length === 0) {
@@ -1162,6 +1294,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     startNewProjectBtn.style.display = 'block';
                 }
             }
+
+            // Show both buttons after results are available
+            showResultButtons();
         } catch (error) {
             errorMessage.textContent = `Error: ${error.message}`;
             errorMessage.style.display = 'block';
