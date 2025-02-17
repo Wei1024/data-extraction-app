@@ -1,0 +1,116 @@
+.menu-toggle {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1001;
+    background: var(--color-white);
+    border: none;
+    border-radius: var(--border-radius-sm);
+    padding: var(--spacing-sm);
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
+}
+
+.menu-toggle:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+}
+
+.menu-toggle .hamburger-icon {
+    font-size: 24px;
+    color: var(--color-teal);
+}
+
+.side-menu {
+    position: fixed;
+    top: 0;
+    left: -300px;
+    width: 300px;
+    height: 100vh;
+    background: var(--color-white);
+    box-shadow: var(--shadow-lg);
+    transition: transform 0.3s ease;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+}
+
+.side-menu.open {
+    transform: translateX(300px);
+}
+
+.menu-header {
+    padding: var(--spacing-lg);
+    background: var(--gradient-teal);
+    color: var(--color-white);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.menu-header img {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--border-radius-sm);
+}
+
+.menu-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 500;
+}
+
+.menu-items {
+    padding: var(--spacing-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    text-decoration: none;
+    color: var(--color-text);
+    border-radius: var(--border-radius-sm);
+    transition: all 0.2s ease;
+}
+
+.menu-item:hover {
+    background-color: var(--color-bg);
+}
+
+.menu-item.active {
+    background-color: var(--color-teal);
+    color: var(--color-white);
+}
+
+.menu-item i {
+    font-size: 20px;
+}
+
+.menu-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease;
+    z-index: 999;
+}
+
+.menu-backdrop.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Adjust main content for menu */
+.app-container {
+    padding-left: var(--spacing-lg);
+} 

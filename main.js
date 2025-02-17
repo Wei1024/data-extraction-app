@@ -15,6 +15,68 @@ if (!fs.existsSync(projectsPath)) {
     fs.mkdirSync(projectsPath)
 }
 
+// Get all projects
+ipcMain.handle('get-projects', async () => {
+    try {
+        const projectDirs = await fs.promises.readdir(projectsPath)
+        const projects = []
+
+        for (const projectDir of projectDirs) {
+            const projectPath = path.join(projectsPath, projectDir)
+            const stats = await fs.promises.stat(projectPath)
+
+            if (stats.isDirectory()) {
+                const files = await fs.promises.readdir(projectPath)
+                const pdfs = []
+
+                for (const file of files) {
+                    if (file.toLowerCase().endsWith('.pdf')) {
+                        const filePath = path.join(projectPath, file)
+                        const fileStats = await fs.promises.stat(filePath)
+                        
+                        // Get extraction results if they exist
+                        const resultsPath = filePath + '.results.json'
+                        let extractionResults = null
+                        try {
+                            if (fs.existsSync(resultsPath)) {
+                                const resultsData = await fs.promises.readFile(resultsPath, 'utf8')
+                                extractionResults = JSON.parse(resultsData)
+                            }
+                        } catch (error) {
+                            console.error(`Error reading results for ${file}:`, error)
+                        }
+
+                        pdfs.push({
+                            name: file,
+                            path: filePath,
+                            size: fileStats.size,
+                            created: fileStats.birthtime,
+                            modified: fileStats.mtime,
+                            extractionResults
+                        })
+                    }
+                }
+
+                projects.push({
+                    id: projectDir,
+                    name: projectDir,
+                    path: projectPath,
+                    created: stats.birthtime,
+                    modified: stats.mtime,
+                    pdfs
+                })
+            }
+        }
+
+        // Sort projects by modified date, newest first
+        projects.sort((a, b) => b.modified - a.modified)
+        return projects
+    } catch (error) {
+        console.error('Error getting projects:', error)
+        throw error
+    }
+})
+
 // Handle PDF file storage
 ipcMain.handle('store-pdf', async (event, { projectName, fileBuffer, fileName }) => {
     try {

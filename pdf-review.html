@@ -2,20 +2,71 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://api.anthropic.com; script-src 'self'; style-src 'self' 'unsafe-inline'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' blob:; connect-src 'self' https://api.anthropic.com; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; worker-src blob: 'self'; img-src 'self' blob:">
     <title>PDF Review - Automatic AI Data Extraction Application</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles/menu.css">
+    <link rel="stylesheet" href="assets/pdfjs/web/pdf_viewer.css">
+    <script type="module" src="pdf-init.js"></script>
 </head>
 <body>
+    <!-- Menu Toggle Button -->
+    <button class="menu-toggle">
+        <span class="hamburger-icon">☰</span>
+    </button>
+
+    <!-- Side Menu -->
+    <div class="side-menu">
+        <div class="menu-header">
+            <img src="assets/images/WeiToGo-logo-v2.png" alt="App Logo">
+            <h3>Data Extraction</h3>
+        </div>
+        <nav class="menu-items">
+            <a href="index.html" class="menu-item">
+                <i>📄</i>
+                New Project
+            </a>
+            <a href="pdf-review.html" class="menu-item">
+                <i>👁</i>
+                Review Projects
+            </a>
+        </nav>
+    </div>
+
+    <!-- Backdrop -->
+    <div class="menu-backdrop"></div>
+
+    <!-- Main Content -->
     <div class="app-container">
-        <div class="main-content">
-            <div class="section-header">
-                <h2>PDF Review</h2>
-                <p class="section-description">Review your PDF documents and extracted data</p>
-                <button id="back-to-main" class="secondary-btn">Back to Main</button>
+        <div class="pdf-review-layout">
+            <!-- Left Panel - Project List -->
+            <div class="panel project-list-panel">
+                <h3>Projects</h3>
+                <div id="projects-container">
+                    <!-- Projects will be populated here -->
+                </div>
             </div>
-            <div id="pdf-review-content">
-                <!-- PDF review content will be added here -->
+
+            <!-- Middle Panel - PDF Viewer -->
+            <div class="panel pdf-viewer-panel">
+                <div class="pdf-controls">
+                    <select id="pdf-selector" class="pdf-dropdown">
+                        <option value="">Select a PDF</option>
+                    </select>
+                </div>
+                <div class="viewer-container-wrapper">
+                    <div id="viewerContainer">
+                        <div id="viewer" class="pdfViewer"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Extraction Results -->
+            <div class="panel extraction-results-panel">
+                <h3>Extraction Results</h3>
+                <div id="extraction-results">
+                    <!-- Extraction results will be displayed here -->
+                </div>
             </div>
         </div>
     </div>
@@ -23,6 +74,7 @@
         <div class="status-message">Ready</div>
         <div id="error-message" class="error"></div>
     </div>
+    <script src="js/menu.js"></script>
     <script src="pdf-review.js"></script>
 </body>
 </html> 

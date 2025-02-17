@@ -105,6 +105,16 @@ contextBridge.exposeInMainWorld('api', {
   version: process.versions.node,
   constants: BATCH_CONFIG,
   
+  // Get all projects
+  getProjects: async () => {
+    try {
+      return await ipcRenderer.invoke('get-projects')
+    } catch (error) {
+      console.error('Error getting projects:', error)
+      throw error
+    }
+  },
+
   // Clear all batch jobs
   clearBatchJobs: () => {
     batchJobs.clear()

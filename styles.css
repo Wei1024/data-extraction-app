@@ -966,3 +966,273 @@ input[type="checkbox"]:focus {
     background: var(--color-border);
     color: var(--color-text);
 }
+
+/* PDF Review Layout */
+.pdf-review-layout {
+    display: flex;
+    gap: var(--spacing-md);
+    height: 100%;
+    width: 100%;
+}
+
+.panel {
+    background: var(--color-white);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-sm);
+    padding: var(--spacing-md);
+    display: flex;
+    flex-direction: column;
+}
+
+.panel h3 {
+    margin: 0 0 var(--spacing-md) 0;
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 1px solid var(--color-border);
+    font-size: 16px;
+    font-weight: 600;
+}
+
+/* Project List Panel */
+.project-list-panel {
+    width: 250px;
+    overflow-y: auto;
+}
+
+.project-item {
+    padding: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.project-item:hover {
+    background-color: var(--color-bg);
+    border-color: var(--color-teal);
+}
+
+.project-item.active {
+    background-color: var(--color-teal);
+    color: var(--color-white);
+    border-color: var(--color-teal);
+}
+
+/* PDF Viewer Panel */
+.pdf-viewer-panel {
+    flex: 2;
+    min-width: 400px;
+}
+
+.pdf-controls {
+    margin-bottom: var(--spacing-md);
+}
+
+.pdf-dropdown {
+    width: 100%;
+    padding: var(--spacing-sm);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-sm);
+    font-size: 14px;
+    background-color: var(--color-white);
+}
+
+#pdf-viewer-container {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    overflow: auto;
+    background-color: #525659;
+}
+
+.pdfViewer {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    background-color: #525659;
+}
+
+.pdfViewer .page {
+    margin: 8px auto;
+    border: 1px solid #5c5c5c;
+    background-color: white;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    width: auto !important;
+    max-width: calc(100% - 32px);
+}
+
+/* Text Layer Styles */
+.textLayer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+    opacity: 0.2;
+    line-height: 1.0;
+}
+
+.textLayer > span {
+    color: transparent;
+    position: absolute;
+    white-space: pre;
+    cursor: text;
+    transform-origin: 0% 0%;
+}
+
+.textLayer .highlight {
+    margin: -1px;
+    padding: 1px;
+    background-color: rgb(180, 0, 170);
+    border-radius: 4px;
+}
+
+.textLayer .highlight.selected {
+    background-color: rgb(0, 100, 0);
+}
+
+.textLayer ::selection {
+    background: rgba(0, 0, 255, 0.2);
+}
+
+/* Page Loading State */
+.page {
+    border: 1px solid var(--color-border);
+    transition: opacity 0.2s;
+}
+
+.page.loading {
+    opacity: 0.5;
+}
+
+/* Extraction Results Panel */
+.extraction-results-panel {
+    width: 300px;
+    overflow-y: auto;
+}
+
+.extraction-result-item {
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-sm);
+    background-color: var(--color-bg);
+}
+
+.extraction-result-item h4 {
+    margin: 0 0 var(--spacing-sm) 0;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.extraction-result-item p {
+    margin: 0;
+    font-size: 14px;
+    color: var(--color-text-light);
+}
+
+/* PDF Viewer Controls */
+.viewer-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-sm);
+}
+
+.viewer-btn {
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--gradient-teal);
+    color: var(--color-white);
+    border: none;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.viewer-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.viewer-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.viewer-select {
+    padding: var(--spacing-sm);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-sm);
+    font-size: 14px;
+    background-color: var(--color-white);
+}
+
+#page-info {
+    font-size: 14px;
+    color: var(--color-text);
+}
+
+/* PDF Viewer Styles */
+#viewerContainer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    overflow: auto;
+    background-color: #525659;
+}
+
+#viewer {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    background-color: #525659;
+}
+
+.pdfViewer {
+    background-color: #525659;
+}
+
+.pdfViewer .page {
+    margin: 8px auto;
+    border: 1px solid #5c5c5c;
+    background-color: white;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    width: auto !important;
+    max-width: calc(100% - 32px);
+}
+
+/* Ensure the viewer panel takes full height and has proper positioning */
+.pdf-viewer-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Container for the viewer */
+.viewer-container-wrapper {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* PDF selector styling */
+.pdf-dropdown {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}

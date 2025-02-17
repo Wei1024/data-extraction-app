@@ -5,8 +5,35 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://api.anthropic.com; script-src 'self'; style-src 'self' 'unsafe-inline'">
     <title>Automatic AI Data Extraction Application</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles/menu.css">
 </head>
 <body>
+    <!-- Menu Toggle Button -->
+    <button class="menu-toggle">
+        <span class="hamburger-icon">☰</span>
+    </button>
+
+    <!-- Side Menu -->
+    <div class="side-menu">
+        <div class="menu-header">
+            <img src="assets/images/WeiToGo-logo-v2.png" alt="App Logo">
+            <h3>Data Extraction</h3>
+        </div>
+        <nav class="menu-items">
+            <a href="index.html" class="menu-item">
+                <i>📄</i>
+                New Project
+            </a>
+            <a href="pdf-review.html" class="menu-item">
+                <i>👁</i>
+                Review Projects
+            </a>
+        </nav>
+    </div>
+
+    <!-- Backdrop -->
+    <div class="menu-backdrop"></div>
+
     <div class="app-container">
         <div class="sidebar">
             <div class="api-key-section">
@@ -183,6 +210,7 @@
         <div class="status-message">Ready</div>
         <div id="error-message" class="error"></div>
     </div>
+    <script src="js/menu.js"></script>
     <script src="renderer.js"></script>
 </body>
 </html>
