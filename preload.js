@@ -5,6 +5,7 @@ const path = require('path')
 const Anthropic = require('@anthropic-ai/sdk')
 const { getExtractionPrompt } = require('./promptTemplates')
 const { MODEL_CONFIG, COST_CONFIG, BATCH_CONFIG, API_ENDPOINTS } = require('./config/anthropic')
+const { dialog, ipcMain } = require('electron')
 
 // Store for batch jobs with enhanced tracking
 const batchJobs = new Map()
@@ -560,5 +561,29 @@ contextBridge.exposeInMainWorld('api', {
       fileBuffer,
       fileName
     })
+  },
+
+  saveExtractionResults: async (projectName, fileName, results) => {
+    return await ipcRenderer.invoke('save-extraction-results', {
+      projectName,
+      fileName,
+      results
+    })
   }
+})
+
+// Add dialog handler
+ipcMain.handle('show-duplicate-dialog', async (event, fileName) => {
+  const { response } = await dialog.showMessageBox({
+    type: 'question',
+    buttons: ['Replace', 'Keep Both', 'Cancel'],
+    defaultId: 1,
+    title: 'File Already Exists',
+    message: `A file named "${fileName}" already exists in this project.`,
+    detail: 'Would you like to replace the existing file or keep both?',
+  })
+  
+  // Map button index to action
+  const actions = ['replace', 'keep-both', 'cancel']
+  return { response: actions[response] }
 })

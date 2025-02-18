@@ -1212,8 +1212,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 const row = document.createElement('tr');
                                 row.innerHTML = `
                                     <td>${file.name}</td>
-                                <td>${field.topic}</td>
-                                <td>${field.query}</td>
+                                    <td>${field.topic}</td>
+                                    <td>${field.query}</td>
                                     <td>No structured data found</td>
                                     <td>No structured data found</td>
                                     <td>No citations available</td>
@@ -1261,6 +1261,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                             const formattedCitations = citationsList.map(citation => 
                                 `${citation.number}. Pages ${citation.pages}: ${citation.text}`
                             ).join('\n\n');
+
+                            // Save the extraction results
+                            await saveExtractionResults(
+                                file.name,
+                                field.topic,
+                                queryContent,
+                                processedThinking,
+                                finalResult,
+                                formattedCitations
+                            );
 
                             // Create table row with processed data
                             const row = document.createElement('tr');
@@ -1325,4 +1335,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         link.click();
         document.body.removeChild(link);
     });
+
+    // Add function to save extraction results
+    const saveExtractionResults = async (fileName, topic, queryContent, thinkingProcess, finalResult, citations) => {
+        const results = {
+            topic,
+            query: queryContent,
+            thinking: thinkingProcess,
+            result: finalResult,
+            citations,
+            timestamp: new Date().toISOString()
+        };
+        
+        try {
+            await window.api.saveExtractionResults(currentProject, fileName, results);
+        } catch (error) {
+            console.error('Error saving extraction results:', error);
+            errorMessage.textContent = `Error saving results: ${error.message}`;
+            errorMessage.style.display = 'block';
+        }
+    };
 });

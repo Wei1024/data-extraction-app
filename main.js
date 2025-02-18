@@ -86,10 +86,32 @@ ipcMain.handle('store-pdf', async (event, { projectName, fileBuffer, fileName })
             fs.mkdirSync(projectDir)
         }
 
-        // Generate unique filename
-        const timestamp = Date.now()
-        const uniqueFileName = `${timestamp}-${sanitizeFileName(fileName)}`
-        const filePath = path.join(projectDir, uniqueFileName)
+        const originalFilePath = path.join(projectDir, sanitizeFileName(fileName))
+        let filePath = originalFilePath
+        
+        // Check if file already exists
+        if (fs.existsSync(originalFilePath)) {
+            // Ask user what to do via dialog
+            const { response } = await event.sender.invoke('show-duplicate-dialog', fileName)
+            
+            if (response === 'replace') {
+                // Use the original path (will overwrite)
+                filePath = originalFilePath
+            } else if (response === 'keep-both') {
+                // Find next available number
+                let counter = 1
+                const ext = path.extname(fileName)
+                const nameWithoutExt = path.basename(fileName, ext)
+                
+                while (fs.existsSync(filePath)) {
+                    filePath = path.join(projectDir, sanitizeFileName(`${nameWithoutExt}(${counter})${ext}`))
+                    counter++
+                }
+            } else {
+                // User cancelled
+                return { success: false, reason: 'cancelled' }
+            }
+        }
 
         // Write file to disk
         await fs.promises.writeFile(filePath, Buffer.from(fileBuffer))
@@ -97,10 +119,56 @@ ipcMain.handle('store-pdf', async (event, { projectName, fileBuffer, fileName })
         return {
             success: true,
             filePath: filePath,
-            fileName: uniqueFileName
+            fileName: path.basename(filePath)
         }
     } catch (error) {
         console.error('Error storing PDF:', error)
+        throw error
+    }
+})
+
+// Handle saving extraction results
+ipcMain.handle('save-extraction-results', async (event, { projectName, fileName, results }) => {
+    try {
+        const projectDir = path.join(projectsPath, sanitizeProjectName(projectName))
+        const pdfPath = path.join(projectDir, sanitizeFileName(fileName))
+        const resultsPath = pdfPath + '.results.json'
+        
+        // Load existing results if any
+        let existingResults = {}
+        try {
+            if (fs.existsSync(resultsPath)) {
+                const resultsData = await fs.promises.readFile(resultsPath, 'utf8')
+                existingResults = JSON.parse(resultsData)
+            }
+        } catch (error) {
+            console.error(`Error reading existing results for ${fileName}:`, error)
+        }
+        
+        // If this topic doesn't exist yet, create an array for it
+        if (!existingResults[results.topic]) {
+            existingResults[results.topic] = []
+        }
+        
+        // Add the new result to the array for this topic
+        existingResults[results.topic].push({
+            query: results.query,
+            thinking: results.thinking,
+            result: results.result,
+            citations: results.citations,
+            timestamp: results.timestamp || new Date().toISOString()
+        })
+        
+        // Write updated results
+        await fs.promises.writeFile(
+            resultsPath,
+            JSON.stringify(existingResults, null, 2),
+            'utf8'
+        )
+        
+        return { success: true }
+    } catch (error) {
+        console.error('Error saving extraction results:', error)
         throw error
     }
 })

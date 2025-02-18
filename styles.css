@@ -1020,8 +1020,8 @@ input[type="checkbox"]:focus {
 
 /* PDF Viewer Panel */
 .pdf-viewer-panel {
-    flex: 2;
-    min-width: 400px;
+    flex: 1.5;
+    min-width: 350px;
 }
 
 .pdf-controls {
@@ -1111,28 +1111,150 @@ input[type="checkbox"]:focus {
 
 /* Extraction Results Panel */
 .extraction-results-panel {
-    width: 300px;
+    width: 400px;
     overflow-y: auto;
-}
-
-.extraction-result-item {
     padding: var(--spacing-md);
-    margin-bottom: var(--spacing-sm);
-    border: 1px solid var(--color-border);
-    border-radius: var(--border-radius-sm);
-    background-color: var(--color-bg);
 }
 
-.extraction-result-item h4 {
-    margin: 0 0 var(--spacing-sm) 0;
-    font-size: 14px;
+.topic-results-container {
+    margin-bottom: var(--spacing-lg);
+    background: var(--color-white);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-sm);
+}
+
+.topic-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-md);
+    background: var(--gradient-teal);
+    color: var(--color-white);
+    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+}
+
+.topic-header h3 {
+    margin: 0;
+    font-size: 16px;
     font-weight: 600;
 }
 
-.extraction-result-item p {
-    margin: 0;
+.topic-toggle {
+    background: none;
+    border: none;
+    color: var(--color-white);
+    cursor: pointer;
     font-size: 14px;
+    padding: 4px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.topic-toggle:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.results-container {
+    padding: var(--spacing-md);
+}
+
+.result-card {
+    background: var(--color-white);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-md);
+    margin-bottom: var(--spacing-md);
+    position: relative;
+    overflow: hidden;
+}
+
+.timestamp-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-size: 12px;
     color: var(--color-text-light);
+    background: var(--color-bg);
+    padding: 4px 8px;
+    border-radius: var(--border-radius-sm);
+}
+
+.query-section,
+.result-section {
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.section-label {
+    font-weight: 600;
+    color: var(--color-teal);
+    margin-bottom: var(--spacing-xs);
+    font-size: 14px;
+}
+
+.section-content {
+    color: var(--color-text);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.expandable-sections {
+    padding: var(--spacing-sm);
+}
+
+.expandable-section {
+    margin-bottom: var(--spacing-sm);
+}
+
+.expandable-section:last-child {
+    margin-bottom: 0;
+}
+
+.expandable-toggle {
+    width: 100%;
+    text-align: left;
+    padding: var(--spacing-sm);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-sm);
+    color: var(--color-text);
+    cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    transition: all 0.2s;
+}
+
+.expandable-toggle:hover {
+    background: var(--color-border);
+}
+
+.toggle-icon {
+    margin-right: var(--spacing-sm);
+    font-size: 10px;
+    transition: transform 0.2s;
+}
+
+.expandable-content {
+    padding: var(--spacing-md);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-top: none;
+    border-radius: 0 0 var(--border-radius-sm) var(--border-radius-sm);
+    font-size: 13px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+.result-timestamp {
+    margin-top: var(--spacing-sm);
+    font-size: 12px;
+    color: var(--color-text-light);
+    text-align: right;
 }
 
 /* PDF Viewer Controls */

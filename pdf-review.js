@@ -182,19 +182,141 @@ document.addEventListener('DOMContentLoaded', () => {
         extractionResults.innerHTML = '';
         
         if (pdfFile.extractionResults) {
-            Object.entries(pdfFile.extractionResults).forEach(([key, value]) => {
-                const resultElement = document.createElement('div');
-                resultElement.className = 'extraction-result-item';
+            Object.entries(pdfFile.extractionResults).forEach(([topic, data]) => {
+                // Create a container for this topic
+                const topicContainer = document.createElement('div');
+                topicContainer.className = 'topic-results-container';
                 
-                const title = document.createElement('h4');
-                title.textContent = key;
+                // Create topic header with toggle button
+                const topicHeader = document.createElement('div');
+                topicHeader.className = 'topic-header';
                 
-                const content = document.createElement('p');
-                content.textContent = value;
+                const topicTitle = document.createElement('h3');
+                topicTitle.textContent = topic;
                 
-                resultElement.appendChild(title);
-                resultElement.appendChild(content);
-                extractionResults.appendChild(resultElement);
+                const toggleButton = document.createElement('button');
+                toggleButton.className = 'topic-toggle';
+                toggleButton.innerHTML = '▼';
+                
+                topicHeader.appendChild(topicTitle);
+                topicHeader.appendChild(toggleButton);
+                topicContainer.appendChild(topicHeader);
+                
+                // Create results container
+                const resultsContainer = document.createElement('div');
+                resultsContainer.className = 'results-container';
+                
+                // Convert to array if it's not already an array (for backward compatibility)
+                const dataArray = Array.isArray(data) ? data : [data];
+                
+                // Sort results by timestamp, newest first
+                const sortedArray = dataArray.sort((a, b) => {
+                    const dateA = a.timestamp ? new Date(a.timestamp) : new Date(0);
+                    const dateB = b.timestamp ? new Date(b.timestamp) : new Date(0);
+                    return dateB - dateA;
+                });
+                
+                // Display each result for this topic
+                sortedArray.forEach((data, index) => {
+                    const resultCard = document.createElement('div');
+                    resultCard.className = 'result-card';
+                    
+                    // Add timestamp if available
+                    if (data.timestamp) {
+                        const timestampSection = document.createElement('div');
+                        timestampSection.className = 'timestamp-badge';
+                        timestampSection.textContent = new Date(data.timestamp).toLocaleString();
+                        resultCard.appendChild(timestampSection);
+                    }
+                    
+                    // Create query section
+                    const querySection = document.createElement('div');
+                    querySection.className = 'query-section';
+                    const queryLabel = document.createElement('div');
+                    queryLabel.className = 'section-label';
+                    queryLabel.textContent = 'Query';
+                    const queryContent = document.createElement('div');
+                    queryContent.className = 'section-content';
+                    queryContent.textContent = data.query;
+                    querySection.appendChild(queryLabel);
+                    querySection.appendChild(queryContent);
+                    resultCard.appendChild(querySection);
+                    
+                    // Create result section
+                    const resultSection = document.createElement('div');
+                    resultSection.className = 'result-section';
+                    const resultLabel = document.createElement('div');
+                    resultLabel.className = 'section-label';
+                    resultLabel.textContent = 'Result';
+                    const resultContent = document.createElement('div');
+                    resultContent.className = 'section-content';
+                    resultContent.textContent = data.result;
+                    resultSection.appendChild(resultLabel);
+                    resultSection.appendChild(resultContent);
+                    resultCard.appendChild(resultSection);
+                    
+                    // Create expandable sections container
+                    const expandableSections = document.createElement('div');
+                    expandableSections.className = 'expandable-sections';
+                    
+                    // Create thinking process section
+                    const thinkingSection = document.createElement('div');
+                    thinkingSection.className = 'expandable-section';
+                    const thinkingToggle = document.createElement('button');
+                    thinkingToggle.className = 'expandable-toggle';
+                    thinkingToggle.innerHTML = '<span class="toggle-icon">▶</span> Thinking Process';
+                    const thinkingContent = document.createElement('div');
+                    thinkingContent.className = 'expandable-content';
+                    thinkingContent.style.display = 'none';
+                    thinkingContent.innerHTML = data.thinking;
+                    
+                    thinkingToggle.addEventListener('click', () => {
+                        const isHidden = thinkingContent.style.display === 'none';
+                        thinkingContent.style.display = isHidden ? 'block' : 'none';
+                        thinkingToggle.querySelector('.toggle-icon').textContent = isHidden ? '▼' : '▶';
+                    });
+                    
+                    thinkingSection.appendChild(thinkingToggle);
+                    thinkingSection.appendChild(thinkingContent);
+                    expandableSections.appendChild(thinkingSection);
+                    
+                    // Create citations section if available
+                    if (data.citations) {
+                        const citationsSection = document.createElement('div');
+                        citationsSection.className = 'expandable-section';
+                        const citationsToggle = document.createElement('button');
+                        citationsToggle.className = 'expandable-toggle';
+                        citationsToggle.innerHTML = '<span class="toggle-icon">▶</span> Citations';
+                        const citationsContent = document.createElement('div');
+                        citationsContent.className = 'expandable-content';
+                        citationsContent.style.display = 'none';
+                        citationsContent.innerHTML = data.citations;
+                        
+                        citationsToggle.addEventListener('click', () => {
+                            const isHidden = citationsContent.style.display === 'none';
+                            citationsContent.style.display = isHidden ? 'block' : 'none';
+                            citationsToggle.querySelector('.toggle-icon').textContent = isHidden ? '▼' : '▶';
+                        });
+                        
+                        citationsSection.appendChild(citationsToggle);
+                        citationsSection.appendChild(citationsContent);
+                        expandableSections.appendChild(citationsSection);
+                    }
+                    
+                    resultCard.appendChild(expandableSections);
+                    resultsContainer.appendChild(resultCard);
+                });
+                
+                topicContainer.appendChild(resultsContainer);
+                
+                // Add topic toggle functionality
+                toggleButton.addEventListener('click', () => {
+                    const isHidden = resultsContainer.style.display === 'none';
+                    resultsContainer.style.display = isHidden ? 'block' : 'none';
+                    toggleButton.textContent = isHidden ? '▼' : '▶';
+                });
+                
+                extractionResults.appendChild(topicContainer);
             });
         } else {
             extractionResults.innerHTML = '<p>No extraction results available</p>';
