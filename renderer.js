@@ -164,9 +164,9 @@ const loadSessionData = () => {
                     dataFieldsContainer.appendChild(fieldRow);
                 });
                 
-                // Update add field button state
+                // Remove the field limit check
                 const addFieldButton = topicSection.querySelector('.add-field-btn');
-                addFieldButton.disabled = topic.fields.length >= 5;
+                addFieldButton.disabled = false;
                 
                 // Show/hide remove topic button
                 const removeTopicButton = topicSection.querySelector('.remove-topic');
@@ -179,9 +179,6 @@ const loadSessionData = () => {
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // Load session data at startup
-    loadSessionData();
-    
     const fileInput = document.getElementById('pdf-file');
     const projectNameInput = document.getElementById('project-name');
     const selectedFilesDiv = document.getElementById('selected-files');
@@ -224,15 +221,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     projectStatusDiv.className = 'project-status';
     projectManagementDiv.appendChild(projectStatusDiv);
 
-    // Initially disable file input
-    fileInput.disabled = true;
-    fileInput.parentElement.style.opacity = '0.6';
+    // Load session data before setting initial states
+    loadSessionData();
 
-    // Ensure project input and create button are enabled and visible
-    projectNameInput.disabled = false;
-    projectNameInput.style.opacity = '1';
-    createProjectBtn.style.opacity = '1';
-    createProjectBtn.style.display = 'block';
+    // Set initial states only if no project is loaded
+    if (!currentProject) {
+        // Initially disable file input but keep the label visible
+        fileInput.disabled = true;
+        const fileLabel = document.querySelector('label[for="pdf-file"]');
+        if (fileLabel) {
+            fileLabel.style.pointerEvents = 'none';
+            fileLabel.style.opacity = '0.6';
+        }
+
+        // Ensure project input and create button are enabled and visible
+        projectNameInput.disabled = false;
+        projectNameInput.style.opacity = '1';
+        createProjectBtn.style.opacity = '1';
+        createProjectBtn.style.display = 'block';
+    }
 
     // Handle Start New Project
     startNewProjectBtn.addEventListener('click', () => {
@@ -251,7 +258,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         selectedFilesDiv.innerHTML = '';
         fileInput.value = '';
         fileInput.disabled = true;
-        fileInput.parentElement.style.opacity = '0.6';
+        
+        // Update file label state
+        const fileLabel = document.querySelector('label[for="pdf-file"]');
+        if (fileLabel) {
+            fileLabel.style.pointerEvents = 'none';
+            fileLabel.style.opacity = '0.6';
+        }
+        
         startNewProjectBtn.style.display = 'none';
     });
 
@@ -275,9 +289,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             </div>
         `;
 
-        // Enable file input
+        // Enable file input and update label state
         fileInput.disabled = false;
-        fileInput.parentElement.style.opacity = '1';
+        const fileLabel = document.querySelector('label[for="pdf-file"]');
+        if (fileLabel) {
+            fileLabel.style.pointerEvents = 'auto';
+            fileLabel.style.opacity = '1';
+        }
         errorMessage.style.display = 'none';
     });
 
@@ -385,17 +403,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             const dataFieldsContainer = event.target.previousElementSibling;
             const currentRows = dataFieldsContainer.getElementsByClassName('data-field-row').length;
             
-            if (currentRows >= 5) {
-                event.target.disabled = true;
-                return;
-            }
-
+            // Remove the field limit check
             const newRow = createDataFieldRow();
             dataFieldsContainer.appendChild(newRow);
-
-            if (currentRows + 1 >= 5) {
-                event.target.disabled = true;
-            }
 
             // Show remove buttons when there's more than one row
             const removeButtons = dataFieldsContainer.getElementsByClassName('remove-field');
@@ -505,11 +515,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 topics[topicName] = [];
             }
             
-            // Check max fields per topic
-            if (topics[topicName].length >= 5) {
-                throw new Error(`Topic "${topicName}" exceeds maximum limit of 5 fields`);
-            }
-            
             topics[topicName].push({
                 name: fieldName,
                 unit: row.result_format || '',
@@ -545,9 +550,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 dataFieldsContainer.appendChild(fieldRow);
             });
             
-            // Update add field button state
+            // Remove the add field button disabled state
             const addFieldButton = topicSection.querySelector('.add-field-btn');
-            addFieldButton.disabled = fields.length >= 5;
+            addFieldButton.disabled = false;
             
             topicsContainer.appendChild(topicSection);
         });
@@ -692,7 +697,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ${job.error ? `<div class="job-error">Error: ${job.error}</div>` : ''}
                 </div>
                 ${job.processing_status === 'ended' ? `
-                    <button class="download-results secondary-btn" data-job-id="${job.id}">Download Results</button>
+                    <div class="job-actions">
+                        <button class="download-results secondary-btn" data-job-id="${job.id}">Download Results</button>
+                        <button class="view-in-pdf secondary-btn" data-job-id="${job.id}">View in PDF</button>
+                    </div>
                 ` : ''}
             `;
             
@@ -868,6 +876,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 // First concatenate all content with newlines to preserve structure
                                 let fullText = contentBlocks.map(block => block.text).join('\n');
 
+                                // Clean up any extra whitespace between tags that might have been introduced
+                                fullText = fullText.replace(/>\s+</g, '><');
+
                                 // Extract tagged content
                                 const dataMatch = fullText.match(/<data>([\s\S]*?)<\/data>/);
                                 const thinkingMatch = fullText.match(/<thinking>([\s\S]*?)<\/thinking>/);
@@ -990,6 +1001,126 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    // Handle batch job results view in PDF
+    batchJobsContainer.addEventListener('click', async (event) => {
+        if (event.target.classList.contains('view-in-pdf')) {
+            const button = event.target;
+            const originalText = button.textContent;
+            const jobId = button.dataset.jobId;
+            const job = window.api.listBatchJobs().find(j => j.id === jobId);
+            
+            if (job && job.processing_status === 'ended') {
+                try {
+                    // Show loading state
+                    button.disabled = true;
+                    button.textContent = 'Processing...';
+                    button.classList.add('processing');
+                    
+                    // Get results through main process
+                    const results = await window.api.getBatchJobStatus(jobId);
+                    
+                    if (results.results && results.results.length > 0) {
+                        // Process and save each result
+                        for (const result of results.results) {
+                            if (result.result?.message?.content?.[0]?.text) {
+                                // Get all content blocks
+                                const contentBlocks = result.result.message.content;
+                                
+                                // Extract PDF name and topic from custom_id
+                                const customIdParts = result.custom_id.split('-');
+                                const pdfName = customIdParts[0].replace('_pdf', '.pdf'); // Convert _pdf to .pdf in the name
+                                const topic = customIdParts[1]; // Second part is the topic
+                                
+                                // Concatenate all content with newlines
+                                let fullText = contentBlocks.map(block => block.text).join('\n');
+
+                                // Clean up any extra whitespace between tags that might have been introduced
+                                fullText = fullText.replace(/>\s+</g, '><');
+
+                                // Extract tagged content
+                                const dataMatch = fullText.match(/<data>([\s\S]*?)<\/data>/);
+                                const thinkingMatch = fullText.match(/<thinking>([\s\S]*?)<\/thinking>/);
+                                const resultMatch = fullText.match(/<result>([\s\S]*?)<\/result>/);
+
+                                if (dataMatch && thinkingMatch && resultMatch) {
+                                    const queryContent = dataMatch[1].trim();
+                                    let processedThinking = thinkingMatch[1].trim();
+                                    const finalResult = resultMatch[1].trim();
+
+                                    // Process citations
+                                    let citationCounter = 1;
+                                    const citationsList = [];
+                                    const citationsMap = new Map();
+
+                                    contentBlocks.forEach(block => {
+                                        if (block.type === 'text' && block.citations) {
+                                            citationsMap.set(block.text.trim(), block.citations[0]);
+                                        }
+                                    });
+
+                                    // Find cited text in thinking content and add citations
+                                    for (const [text, citation] of citationsMap) {
+                                        if (processedThinking.includes(text)) {
+                                            citationsList.push({
+                                                number: citationCounter,
+                                                text: citation.cited_text,
+                                                pages: `${citation.start_page_number}-${citation.end_page_number}`
+                                            });
+
+                                            // Add citation reference after the text
+                                            processedThinking = processedThinking.replace(
+                                                text,
+                                                `${text}[${citationCounter}]`
+                                            );
+                                            citationCounter++;
+                                        }
+                                    }
+
+                                    // Format citations as a numbered list
+                                    const formattedCitations = citationsList.map(citation => 
+                                        `${citation.number}. Pages ${citation.pages}: ${citation.text}`
+                                    ).join('\n\n');
+
+                                    // Save in the same format as single query results
+                                    await saveExtractionResults(
+                                        pdfName,
+                                        topic,
+                                        queryContent,
+                                        processedThinking,
+                                        finalResult,
+                                        formattedCitations
+                                    );
+                                }
+                            }
+                        }
+                        
+                        // Show success state briefly
+                        button.textContent = 'Results Saved!';
+                        button.classList.remove('processing');
+                        button.classList.add('success');
+                        
+                        // Redirect to PDF viewer
+                        setTimeout(() => {
+                            window.location.href = 'pdf-review.html';
+                        }, 1000);
+                    } else {
+                        throw new Error('No results found');
+                    }
+                } catch (error) {
+                    console.error('Error processing results:', error);
+                    button.textContent = 'Processing failed';
+                    button.classList.remove('processing');
+                    button.classList.add('error');
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.classList.remove('error');
+                        button.disabled = false;
+                    }, 3000);
+                }
+            }
+        }
+    });
+
     // Show both download and review buttons when results are available
     const showResultButtons = () => {
         downloadButton.style.display = 'inline-block';
@@ -1004,9 +1135,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Update existing code to show both buttons
     submitButton.addEventListener('click', async () => {
         const isBatchMode = batchModeToggle?.checked;
+        
+        // Add visual feedback class to button
+        submitButton.classList.add('processing');
+        submitButton.textContent = isBatchMode ? 'Submitting Batch...' : 'Processing Query...';
+        
         if (selectedFiles.length === 0) {
             errorMessage.textContent = 'Please select at least one PDF file';
             errorMessage.style.display = 'block';
+            // Reset button state
+            submitButton.classList.remove('processing');
+            submitButton.textContent = isBatchMode ? 'Submit Batch Job' : 'Submit Query';
             return;
         }
 
@@ -1202,6 +1341,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                             // First concatenate all content with newlines to preserve structure
                             let fullText = result.content.map(block => block.text).join('\n');
 
+                            // Clean up any extra whitespace between tags that might have been introduced
+                            fullText = fullText.replace(/>\s+</g, '><');
+
                             // Extract tagged content
                             const dataMatch = fullText.match(/<data>([\s\S]*?)<\/data>/);
                             const thinkingMatch = fullText.match(/<thinking>([\s\S]*?)<\/thinking>/);
@@ -1209,6 +1351,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                             if (!dataMatch || !thinkingMatch || !resultMatch) {
                                 // Handle missing tags
+                                console.warn('Missing tags in response:', { dataMatch, thinkingMatch, resultMatch });
                                 const row = document.createElement('tr');
                                 row.innerHTML = `
                                     <td>${file.name}</td>
@@ -1314,6 +1457,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             loadingIndicator.textContent = 'Processing...';
             loadingIndicator.style.display = 'none';
             submitButton.disabled = false;
+            // Reset button state with success indication
+            submitButton.classList.remove('processing');
+            submitButton.classList.add('success');
+            submitButton.textContent = isBatchMode ? 'Batch Job Submitted!' : 'Query Complete!';
+            
+            // Reset button state after 2 seconds
+            setTimeout(() => {
+                submitButton.classList.remove('success');
+                submitButton.textContent = isBatchMode ? 'Submit Batch Job' : 'Submit Query';
+            }, 2000);
         }
     });
 
@@ -1355,4 +1508,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             errorMessage.style.display = 'block';
         }
     };
+
+    // Handle template download
+    downloadTemplateButton.addEventListener('click', () => {
+        // Create example template content
+        const templateContent = 'topic_name,field_name,result_format,description\n' +
+            'Population,Diet Program,output,"the name of the diet program"\n' +
+            'Population,Population,number,"one sample number"\n' +
+            'Population,Age Mean,mean (SD),"Mean of the age"\n' +
+            'Population,Female Number,number,"number of female participants"\n' +
+            'Population,BMI,mean in kg/m2,"Mean (in kg/m2)"\n' +
+            'test,Body Weight,mean in kg,"Mean (in kg)"';
+        
+        // Create and trigger download
+        const blob = new Blob(['\uFEFF' + templateContent], { type: 'text/csv;charset=utf-8-sig' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'extraction_template.csv';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    });
 });

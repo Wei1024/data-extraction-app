@@ -88,18 +88,18 @@ document.addEventListener('DOMContentLoaded', () => {
             projectsContainer.innerHTML = '';
 
             if (projects && projects.length > 0) {
+                // Projects are already sorted by modified date in main process
                 projects.forEach(project => {
                     const projectElement = document.createElement('div');
                     projectElement.className = 'project-item';
                     projectElement.textContent = project.name;
                     projectElement.dataset.projectId = project.id;
-
                     projectElement.addEventListener('click', () => selectProject(project));
                     projectsContainer.appendChild(projectElement);
                 });
 
-                // Select the most recent project by default
-                selectProject(projects[projects.length - 1]);
+                // Select the first project (most recent) by default
+                selectProject(projects[0]);
             } else {
                 statusMessage.textContent = 'No projects available';
             }
@@ -183,22 +183,27 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (pdfFile.extractionResults) {
             Object.entries(pdfFile.extractionResults).forEach(([topic, data]) => {
-                // Create a container for this topic
                 const topicContainer = document.createElement('div');
                 topicContainer.className = 'topic-results-container';
                 
                 // Create topic header with toggle button
                 const topicHeader = document.createElement('div');
-                topicHeader.className = 'topic-header';
+                topicHeader.className = 'extraction-topic-header';
+                
+                const titleContainer = document.createElement('div');
+                titleContainer.style.cssText = 'flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
                 
                 const topicTitle = document.createElement('h3');
+                topicTitle.style.cssText = 'margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
                 topicTitle.textContent = topic;
+                titleContainer.appendChild(topicTitle);
                 
                 const toggleButton = document.createElement('button');
                 toggleButton.className = 'topic-toggle';
                 toggleButton.innerHTML = '▼';
+                toggleButton.style.flexShrink = '0';
                 
-                topicHeader.appendChild(topicTitle);
+                topicHeader.appendChild(titleContainer);
                 topicHeader.appendChild(toggleButton);
                 topicContainer.appendChild(topicHeader);
                 
@@ -206,7 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const resultsContainer = document.createElement('div');
                 resultsContainer.className = 'results-container';
                 
-                // Convert to array if it's not already an array (for backward compatibility)
+                // Convert to array if it's not already an array
                 const dataArray = Array.isArray(data) ? data : [data];
                 
                 // Sort results by timestamp, newest first
@@ -229,6 +234,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         resultCard.appendChild(timestampSection);
                     }
                     
+                    // Create data field container
+                    const dataFieldContainer = document.createElement('div');
+                    dataFieldContainer.className = 'data-field-container';
+                    
                     // Create query section
                     const querySection = document.createElement('div');
                     querySection.className = 'query-section';
@@ -240,7 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     queryContent.textContent = data.query;
                     querySection.appendChild(queryLabel);
                     querySection.appendChild(queryContent);
-                    resultCard.appendChild(querySection);
+                    dataFieldContainer.appendChild(querySection);
                     
                     // Create result section
                     const resultSection = document.createElement('div');
@@ -253,58 +262,182 @@ document.addEventListener('DOMContentLoaded', () => {
                     resultContent.textContent = data.result;
                     resultSection.appendChild(resultLabel);
                     resultSection.appendChild(resultContent);
-                    resultCard.appendChild(resultSection);
+                    dataFieldContainer.appendChild(resultSection);
+                    
+                    // Create human review section
+                    const reviewSection = document.createElement('div');
+                    reviewSection.className = 'review-section';
+                    const reviewLabel = document.createElement('div');
+                    reviewLabel.className = 'section-label';
+                    reviewLabel.textContent = 'Human Review';
+                    
+                    // Create review input container
+                    const reviewInputContainer = document.createElement('div');
+                    reviewInputContainer.className = 'review-input-container';
+                    
+                    // Create review input
+                    const reviewInput = document.createElement('textarea');
+                    reviewInput.className = 'review-input';
+                    reviewInput.placeholder = 'Enter your review here...';
+                    reviewInput.value = data.human_review || ''; // Load existing review if any
+                    
+                    // Create agree button
+                    const agreeButton = document.createElement('button');
+                    agreeButton.className = 'agree-button';
+                    agreeButton.innerHTML = '<span class="agree-icon">✓</span> Agree with AI';
+                    agreeButton.addEventListener('click', () => {
+                        reviewInput.value = data.result;
+                        saveReview(data, reviewInput.value, agreeButton);
+                    });
+                    
+                    // Create save button
+                    const saveButton = document.createElement('button');
+                    saveButton.className = 'save-button';
+                    saveButton.textContent = 'Save Review';
+                    saveButton.addEventListener('click', () => {
+                        saveReview(data, reviewInput.value, saveButton);
+                    });
+                    
+                    // Add buttons to container
+                    const buttonContainer = document.createElement('div');
+                    buttonContainer.className = 'review-buttons';
+                    buttonContainer.appendChild(agreeButton);
+                    buttonContainer.appendChild(saveButton);
+                    
+                    reviewInputContainer.appendChild(reviewInput);
+                    reviewInputContainer.appendChild(buttonContainer);
+                    
+                    reviewSection.appendChild(reviewLabel);
+                    reviewSection.appendChild(reviewInputContainer);
+                    
+                    // Add all sections to container
+                    dataFieldContainer.appendChild(querySection);
+                    dataFieldContainer.appendChild(resultSection);
+                    dataFieldContainer.appendChild(reviewSection);
+                    
+                    resultCard.appendChild(dataFieldContainer);
                     
                     // Create expandable sections container
                     const expandableSections = document.createElement('div');
                     expandableSections.className = 'expandable-sections';
                     
-                    // Create thinking process section
+                    // Create thinking process section with enhanced styling
                     const thinkingSection = document.createElement('div');
-                    thinkingSection.className = 'expandable-section';
+                    thinkingSection.className = 'expandable-section thinking-section';
                     const thinkingToggle = document.createElement('button');
                     thinkingToggle.className = 'expandable-toggle';
                     thinkingToggle.innerHTML = '<span class="toggle-icon">▶</span> Thinking Process';
                     const thinkingContent = document.createElement('div');
-                    thinkingContent.className = 'expandable-content';
+                    thinkingContent.className = 'expandable-content thinking-content';
                     thinkingContent.style.display = 'none';
-                    thinkingContent.innerHTML = data.thinking;
                     
-                    thinkingToggle.addEventListener('click', () => {
-                        const isHidden = thinkingContent.style.display === 'none';
-                        thinkingContent.style.display = isHidden ? 'block' : 'none';
-                        thinkingToggle.querySelector('.toggle-icon').textContent = isHidden ? '▼' : '▶';
+                    // Process thinking text to create interactive citations
+                    let thinkingText = data.thinking || '';
+                    const citationMap = new Map();
+                    let citationCounter = 1;
+                    
+                    // Extract citations from the thinking text
+                    const citationRegex = /\[(\d+)\]/g;
+                    const citations = (data.citations || '').split('\n\n');
+                    let match;
+                    
+                    while ((match = citationRegex.exec(thinkingText)) !== null) {
+                        const citationNumber = match[1];
+                        const citation = citations[parseInt(citationNumber) - 1];
+                        if (citation) {
+                            citationMap.set(citationNumber, citation);
+                        }
+                    }
+                    
+                    // Replace citation numbers with interactive spans
+                    thinkingText = thinkingText.replace(citationRegex, (match, number) => {
+                        return `<span class="citation-link" data-citation="${number}">[${number}]</span>`;
+                    });
+                    
+                    // Create structured thinking content
+                    const thinkingSteps = thinkingText.split('\n\n').map(step => {
+                        if (step.trim()) {
+                            return `<div class="thinking-step">${step}</div>`;
+                        }
+                        return '';
+                    }).join('');
+                    
+                    thinkingContent.innerHTML = thinkingSteps;
+                    
+                    // Add click handlers for citations
+                    thinkingContent.querySelectorAll('.citation-link').forEach(link => {
+                        link.addEventListener('click', () => {
+                            const citationNumber = link.dataset.citation;
+                            const citation = citationMap.get(citationNumber);
+                            if (citation) {
+                                // Extract page numbers from citation
+                                const pageMatch = citation.match(/Pages (\d+)/);
+                                if (pageMatch) {
+                                    const pageNumber = parseInt(pageMatch[1]);
+                                    scrollToPage(pageNumber);
+                                }
+                                // Show citation tooltip
+                                showCitationTooltip(link, citation);
+                            }
+                        });
                     });
                     
                     thinkingSection.appendChild(thinkingToggle);
                     thinkingSection.appendChild(thinkingContent);
                     expandableSections.appendChild(thinkingSection);
                     
-                    // Create citations section if available
-                    if (data.citations) {
-                        const citationsSection = document.createElement('div');
-                        citationsSection.className = 'expandable-section';
-                        const citationsToggle = document.createElement('button');
-                        citationsToggle.className = 'expandable-toggle';
-                        citationsToggle.innerHTML = '<span class="toggle-icon">▶</span> Citations';
-                        const citationsContent = document.createElement('div');
-                        citationsContent.className = 'expandable-content';
-                        citationsContent.style.display = 'none';
-                        citationsContent.innerHTML = data.citations;
-                        
-                        citationsToggle.addEventListener('click', () => {
-                            const isHidden = citationsContent.style.display === 'none';
-                            citationsContent.style.display = isHidden ? 'block' : 'none';
-                            citationsToggle.querySelector('.toggle-icon').textContent = isHidden ? '▼' : '▶';
+                    // Create citations section with enhanced styling
+                    const citationsSection = document.createElement('div');
+                    citationsSection.className = 'expandable-section citations-section';
+                    const citationsToggle = document.createElement('button');
+                    citationsToggle.className = 'expandable-toggle';
+                    citationsToggle.innerHTML = '<span class="toggle-icon">▶</span> Citations';
+                    const citationsContent = document.createElement('div');
+                    citationsContent.className = 'expandable-content citations-content';
+                    citationsContent.style.display = 'none';
+                    
+                    // Create structured citations content
+                    const citationsList = (data.citations ? data.citations.split('\n\n') : []).map((citation, index) => {
+                        if (citation && citation.trim()) {
+                            const pageMatch = citation.match(/Pages (\d+)/);
+                            const pageNumber = pageMatch ? pageMatch[1] : null;
+                            return `
+                                <div class="citation-item" data-page="${pageNumber}">
+                                    <div class="citation-number">[${index + 1}]</div>
+                                    <div class="citation-text">${citation}</div>
+                                    ${pageNumber ? `<button class="goto-page-btn" data-page="${pageNumber}">Go to Page ${pageNumber}</button>` : ''}
+                                </div>
+                            `;
+                        }
+                        return '';
+                    }).join('');
+                    
+                    citationsContent.innerHTML = citationsList;
+                    
+                    // Add click handlers for "Go to Page" buttons
+                    citationsContent.querySelectorAll('.goto-page-btn').forEach(button => {
+                        button.addEventListener('click', () => {
+                            const pageNumber = parseInt(button.dataset.page);
+                            scrollToPage(pageNumber);
                         });
-                        
-                        citationsSection.appendChild(citationsToggle);
-                        citationsSection.appendChild(citationsContent);
-                        expandableSections.appendChild(citationsSection);
-                    }
+                    });
+                    
+                    citationsSection.appendChild(citationsToggle);
+                    citationsSection.appendChild(citationsContent);
+                    expandableSections.appendChild(citationsSection);
                     
                     resultCard.appendChild(expandableSections);
                     resultsContainer.appendChild(resultCard);
+                    
+                    // Add toggle functionality for expandable sections
+                    [thinkingToggle, citationsToggle].forEach(toggle => {
+                        toggle.addEventListener('click', () => {
+                            const content = toggle.nextElementSibling;
+                            const isHidden = content.style.display === 'none';
+                            content.style.display = isHidden ? 'block' : 'none';
+                            toggle.querySelector('.toggle-icon').textContent = isHidden ? '▼' : '▶';
+                        });
+                    });
                 });
                 
                 topicContainer.appendChild(resultsContainer);
@@ -323,6 +456,57 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Helper function to show citation tooltip
+    function showCitationTooltip(element, citation) {
+        const tooltip = document.createElement('div');
+        tooltip.className = 'citation-tooltip';
+        tooltip.textContent = citation;
+        
+        // Position the tooltip
+        const rect = element.getBoundingClientRect();
+        tooltip.style.position = 'absolute';
+        tooltip.style.top = `${rect.bottom + 5}px`;
+        tooltip.style.left = `${rect.left}px`;
+        
+        document.body.appendChild(tooltip);
+        
+        // Remove tooltip when clicking outside
+        const removeTooltip = (e) => {
+            if (!tooltip.contains(e.target) && e.target !== element) {
+                tooltip.remove();
+                document.removeEventListener('click', removeTooltip);
+            }
+        };
+        
+        document.addEventListener('click', removeTooltip);
+    }
+
+    // Function to scroll to specific page
+    function scrollToPage(pageNumber) {
+        if (!pdfViewer || !pageNumber) return;
+        
+        // Ensure page number is within bounds
+        if (pageNumber < 1 || pageNumber > pdfViewer.pagesCount) return;
+
+        // Scroll to the page
+        pdfViewer.currentPageNumber = pageNumber;
+        
+        // Get the page element
+        const pageElement = document.querySelector(`[data-page-number="${pageNumber}"]`);
+        if (pageElement) {
+            // Scroll the page into view
+            pageElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            // Add highlight effect
+            pageElement.classList.add('page-highlight');
+            
+            // Remove highlight class after animation
+            setTimeout(() => {
+                pageElement.classList.remove('page-highlight');
+            }, 2000);
+        }
+    }
+
     // Add event listener for PDF selection
     pdfSelector.addEventListener('change', () => {
         const selectedPdf = currentProject.pdfs.find(pdf => pdf.path === pdfSelector.value);
@@ -330,6 +514,55 @@ document.addEventListener('DOMContentLoaded', () => {
             loadPdf(selectedPdf);
         }
     });
+
+    // Function to save review
+    async function saveReview(data, reviewText, saveButton) {
+        try {
+            // Save to the data object
+            data.human_review = reviewText;
+            data.review_timestamp = new Date().toISOString();
+            
+            // Update the current PDF's extraction results
+            if (currentPdf && currentPdf.extractionResults) {
+                // Find the topic and update the data in the extraction results
+                for (const [topic, topicData] of Object.entries(currentPdf.extractionResults)) {
+                    const dataArray = Array.isArray(topicData) ? topicData : [topicData];
+                    const updatedData = dataArray.map(item => {
+                        if (item === data) {
+                            return {
+                                ...item,
+                                human_review: reviewText,
+                                review_timestamp: data.review_timestamp
+                            };
+                        }
+                        return item;
+                    });
+                    currentPdf.extractionResults[topic] = updatedData;
+                }
+
+                // Call the main process to save the updated results
+                await window.api.saveExtractionResults(currentProject.id, currentPdf.name, currentPdf.extractionResults);
+                
+                // Show success feedback
+                saveButton.classList.add('success');
+                saveButton.textContent = 'Saved!';
+                setTimeout(() => {
+                    saveButton.classList.remove('success');
+                    saveButton.textContent = 'Save Review';
+                }, 2000);
+            } else {
+                throw new Error('Current PDF or extraction results not found');
+            }
+        } catch (error) {
+            console.error('Error saving review:', error);
+            saveButton.classList.add('error');
+            saveButton.textContent = 'Error Saving';
+            setTimeout(() => {
+                saveButton.classList.remove('error');
+                saveButton.textContent = 'Save Review';
+            }, 2000);
+        }
+    }
 
     // Initialize the application
     init();

@@ -265,7 +265,19 @@ contextBridge.exposeInMainWorld('api', {
       const base64Pdf = buffer.toString('base64')
       
       for (const field of fields) {
-        const customId = `${file.name}-${field.topic}-${field.fieldName}`.replace(/[^a-zA-Z0-9-_]/g, '_')
+        // Truncate components to ensure custom_id stays within 64 chars
+        const truncateComponent = (str, maxLen) => {
+          if (str.length <= maxLen) return str;
+          return str.slice(0, maxLen);
+        };
+
+        // Allocate space for components while keeping total under 64 chars
+        // Format: filename(25)-topic(20)-fieldname(16) = 61 chars + 2 hyphens = 63 chars total
+        const fileName = truncateComponent(file.name, 25);
+        const topic = truncateComponent(field.topic, 20);
+        const fieldName = truncateComponent(field.fieldName, 16);
+        const customId = `${fileName}-${topic}-${fieldName}`.replace(/[^a-zA-Z0-9-_]/g, '_');
+
         const request = {
           custom_id: customId,
           params: {
